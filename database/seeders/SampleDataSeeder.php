@@ -10,11 +10,43 @@ use App\Models\PatientTransfer;
 use App\Models\DailyCensus;
 use Carbon\Carbon;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
 class SampleDataSeeder extends Seeder
 {
     public function run(): void
     {
         $rooms = Room::all();
+        $firstRoom = $rooms->first();
+
+        // 1. Seed Petugas SHRI (Superadmin)
+        User::updateOrCreate(
+            ['email' => 'shri@rssa.go.id'],
+            [
+                'name' => 'Petugas SHRI (Superadmin)',
+                'username' => 'shri',
+                'password' => Hash::make('password'),
+                'role' => 'superadmin',
+                'phone' => '081234567890',
+            ]
+        );
+
+        // 2. Seed Admin Ruangan (Admin)
+        if ($firstRoom) {
+            User::updateOrCreate(
+                ['email' => 'admin.ruang@rssa.go.id'],
+                [
+                    'name' => 'Admin ' . $firstRoom->name,
+                    'username' => 'adminruang',
+                    'password' => Hash::make('password'),
+                    'role' => 'admin',
+                    'room_id' => $firstRoom->id,
+                    'phone' => '089876543210',
+                ]
+            );
+        }
+
 
         $firstNamesL = ['Budi', 'Ahmad', 'Eko', 'Slamet', 'Bambang', 'Hendra', 'Agus', 'Sugeng', 'Hartono', 'Bayu', 'Fajar', 'Dwi', 'Tri', 'Anang', 'Supriadi', 'Doni', 'Rudi', 'Heri', 'Joko', 'Wawan'];
         $firstNamesP = ['Siti', 'Dewi', 'Rina', 'Sri', 'Ratna', 'Endang', 'Maryam', 'Yuni', 'Indah', 'Maya', 'Nurul', 'Eka', 'Wati', 'Titin', 'Nining', 'Lilis', 'Diah', 'Eni', 'Retno', 'Sulastri'];

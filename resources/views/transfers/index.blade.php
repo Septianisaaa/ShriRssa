@@ -6,10 +6,14 @@
 
 @section('content')
 
+    @php
+        $rolePrefix = Auth::user()->isSuperAdmin() ? 'shri.' : 'admin_ruang.';
+    @endphp
+
     <!-- Pending Transfers Inbox -->
     <div class="card">
-        <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.85rem; color: #b45309; display: flex; align-items: center; gap: 0.4rem;">
-            <i class="fa-solid fa-inbox"></i> Permohonan Mutasi Masuk (Transfer In) - Pending
+        <h3 class="section-title" style="color: #b45309;">
+            Permohonan Mutasi Masuk (Transfer In) - Pending
         </h3>
 
         <div class="table-responsive">
@@ -35,24 +39,24 @@
                             <td><span class="badge badge-warning">{{ $tf->toRoom->name }}</span></td>
                             <td>{{ $tf->notes ?? '-' }}</td>
                             <td style="display: flex; gap: 0.4rem;">
-                                <form action="{{ route('transfers.accept', $tf->id) }}" method="POST">
+                                <form action="{{ route($rolePrefix . 'transfers.accept', $tf->id) }}" method="POST">
                                     @csrf
-                                    <button type="submit" class="btn btn-success" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">
-                                        <i class="fa-solid fa-check"></i> Terima Pasien
+                                    <button type="submit" class="btn btn-success" style="padding: 0.3rem 0.75rem; font-size: 0.775rem;">
+                                        Terima Pasien
                                     </button>
                                 </form>
 
-                                <form action="{{ route('transfers.reject', $tf->id) }}" method="POST">
+                                <form action="{{ route($rolePrefix . 'transfers.reject', $tf->id) }}" method="POST">
                                     @csrf
-                                    <button type="submit" class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; color: #991b1b; border-color: #fecaca; background: #fef2f2;">
-                                        <i class="fa-solid fa-xmark"></i> Tolak
+                                    <button type="submit" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.775rem; color: #991b1b; border-color: #fecaca; background: #fef2f2;">
+                                        Tolak
                                     </button>
                                 </form>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 1.25rem; color: var(--text-muted);">
+                            <td colspan="7" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
                                 Tidak ada permohonan mutasi pindahan pasien yang pending saat ini.
                             </td>
                         </tr>
@@ -64,9 +68,7 @@
 
     <!-- Transfer History -->
     <div class="card">
-        <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.85rem; color: var(--text-dark); display: flex; align-items: center; gap: 0.4rem;">
-            <i class="fa-solid fa-history" style="color: var(--primary);"></i> Riwayat Mutasi Pindahan
-        </h3>
+        <h3 class="section-title">Riwayat Mutasi Pindahan</h3>
 
         <div class="table-responsive">
             <table>
@@ -100,7 +102,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 1.25rem; color: var(--text-muted);">
+                            <td colspan="7" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
                                 Belum ada riwayat mutasi pasien.
                             </td>
                         </tr>
@@ -111,3 +113,5 @@
     </div>
 
 @endsection
+
+

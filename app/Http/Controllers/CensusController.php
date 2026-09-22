@@ -15,7 +15,9 @@ class CensusController extends Controller
 {
     public function index(Request $request)
     {
-        $selectedRoomId = $request->get('room_id', Room::first()?->id);
+        $user = auth()->user();
+        $defaultRoomId = ($user && $user->isAdminRuang() && $user->room_id) ? $user->room_id : Room::first()?->id;
+        $selectedRoomId = $request->get('room_id', $defaultRoomId);
         $selectedDate = $request->get('date', Carbon::today()->toDateString());
 
         $room = Room::findOrFail($selectedRoomId);
