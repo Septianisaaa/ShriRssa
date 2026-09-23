@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Kelola Admin Ruangan - SHRI RSSA')
-@section('header_title', 'Kelola Account Admin Ruangan')
-@section('header_subtitle', 'Pendaftaran & Manajamen Hak Akses Admin Ruangan Perawatan RSUD Dr. Saiful Anwar')
+@section('title', 'Kelola Akun - SHRI RSSA')
+@section('header_title', 'Kelola Akun Pengguna')
+@section('header_subtitle', 'Pendaftaran & Manajemen Hak Akses Akun Pengguna RSUD Dr. Saiful Anwar')
 
 @section('content')
 
@@ -35,7 +35,7 @@
                         <option value="">-- Pilih Ruangan --</option>
                         @foreach($rooms as $r)
                             <option value="{{ $r->id }}" {{ old('room_id') == $r->id ? 'selected' : '' }}>
-                                {{ $r->name }} ({{ $r->category }} - {{ $r->floor }})
+                                {{ $r->name }} ({{ $r->category }})
                             </option>
                         @endforeach
                     </select>
@@ -114,7 +114,7 @@
                 </table>
             </div>
 
-            <h3 class="section-title">Daftar Petugas SHRI (Superadmin)</h3>
+            <h3 class="section-title">Daftar Admin (Petugas SHRI)</h3>
             <div class="table-responsive">
                 <table>
                     <thead>
@@ -133,7 +133,7 @@
                                     <div><code>{{ $super->username }}</code></div>
                                     <div style="font-size: 0.725rem; color: var(--text-muted);">{{ $super->email }}</div>
                                 </td>
-                                <td><span class="badge badge-info">Superadmin</span></td>
+                                <td><span class="badge badge-info">Admin SHRI</span></td>
                                 <td>{{ $super->phone ?? '-' }}</td>
                             </tr>
                         @endforeach

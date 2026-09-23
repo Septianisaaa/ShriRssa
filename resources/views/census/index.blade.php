@@ -20,7 +20,7 @@
                 <select name="room_id" class="form-select" onchange="this.form.submit()">
                     @foreach($rooms as $r)
                         <option value="{{ $r->id }}" {{ $r->id == $room->id ? 'selected' : '' }}>
-                            {{ $r->name }} ({{ $r->category }} - {{ $r->floor }})
+                            {{ $r->name }} ({{ $r->category }})
                         </option>
                     @endforeach
                 </select>
@@ -31,13 +31,9 @@
                 <input type="date" name="date" class="form-control" value="{{ $selectedDate }}" onchange="this.form.submit()">
             </div>
 
-            @php
-                $currentMonth = \Carbon\Carbon::parse($selectedDate)->month;
-                $currentYear = \Carbon\Carbon::parse($selectedDate)->year;
-            @endphp
-            <a href="{{ route($rolePrefix . 'census.monthly.export', ['room_id' => $room->id, 'month' => $currentMonth, 'year' => $currentYear]) }}" class="btn btn-success" style="height: 38px;">
-                Export Rekap Sensus (CSV/Excel)
-            </a>
+            <button type="button" class="btn btn-success" style="height: 38px; font-weight: 700;" onclick="openExportModal()">
+                <i class="fa-solid fa-file-excel"></i> Export Rekap Sensus (Excel)
+            </button>
         </form>
     </div>
 
@@ -54,7 +50,7 @@
 
                 <div class="form-group">
                     <label class="form-label">No. Rekam Medis (No. RM):</label>
-                    <input type="text" name="rm_number" class="form-control" placeholder="Contoh: RM-982143" required>
+                    <input type="text" name="rm_number" class="form-control" placeholder="Contoh: 12001001" required>
                 </div>
 
                 <div class="form-group">
@@ -62,12 +58,24 @@
                     <input type="text" name="name" class="form-control" placeholder="Nama Pasien" required>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.85rem;">
                     <div class="form-group">
                         <label class="form-label">Jenis Kelamin:</label>
                         <select name="gender" class="form-select" required>
                             <option value="L">Laki-laki (L)</option>
                             <option value="P">Perempuan (P)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Kelas Perawatan:</label>
+                        <select name="room_class" class="form-select" required>
+                            <option value="Kelas 1" {{ $room->room_class == 'Kelas 1' ? 'selected' : '' }}>Kelas 1</option>
+                            <option value="Kelas 2" {{ $room->room_class == 'Kelas 2' ? 'selected' : '' }}>Kelas 2</option>
+                            <option value="Kelas 3" {{ $room->room_class == 'Kelas 3' ? 'selected' : '' }}>Kelas 3</option>
+                            <option value="VIP" {{ $room->room_class == 'VIP' ? 'selected' : '' }}>VIP</option>
+                            <option value="VVIP" {{ $room->room_class == 'VVIP' ? 'selected' : '' }}>VVIP</option>
+                            <option value="Non Kelas" {{ str_contains($room->room_class, 'Khusus') || str_contains($room->room_class, 'Intensif') || $room->room_class == 'Non Kelas' ? 'selected' : '' }}>Non Kelas / Khusus</option>
                         </select>
                     </div>
 
@@ -112,7 +120,7 @@
                         <option value="">-- Pilih Ruangan Tujuan --</option>
                         @foreach($rooms as $r)
                             @if($r->id != $room->id)
-                                <option value="{{ $r->id }}">{{ $r->name }} ({{ $r->floor }})</option>
+                                <option value="{{ $r->id }}">{{ $r->name }} ({{ $r->category }})</option>
                             @endif
                         @endforeach
                     </select>
@@ -150,6 +158,7 @@
                         <th>No. RM</th>
                         <th>Nama Pasien</th>
                         <th>JK</th>
+                        <th>Kelas</th>
                         <th>Tanggal & Jam MRS</th>
                         <th>Diagnosa</th>
                         <th>Status</th>
@@ -162,6 +171,7 @@
                             <td><strong>{{ $adm->patient->rm_number }}</strong></td>
                             <td><strong>{{ $adm->patient->name }}</strong></td>
                             <td>{{ $adm->patient->gender }}</td>
+                            <td><span class="badge badge-warning" style="font-size: 0.75rem;">{{ $adm->room_class ?? $room->room_class }}</span></td>
                             <td>
                                 {{ $adm->admission_date->format('d/m/Y H:i') }}
                                 @if($adm->admission_date->month != now()->month)
@@ -178,7 +188,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
+                            <td colspan="8" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
                                 Tidak ada pasien aktif di ruangan ini.
                             </td>
                         </tr>
@@ -222,6 +232,74 @@
         </div>
     </div>
 
+    <!-- Modal Export Excel / CSV -->
+    <div id="exportModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="card" style="width: 100%; max-width: 480px; padding: 1.5rem; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.75rem;">
+                <h3 class="section-title" style="margin-bottom: 0; display: flex; align-items: center; gap: 0.5rem; color: #166534;">
+                    <i class="fa-solid fa-file-excel" style="font-size: 1.25rem; color: #16a34a;"></i> Export Rekapitulasi Sensus Excel
+                </h3>
+                <button type="button" onclick="closeExportModal()" style="background: none; border: none; font-size: 1.35rem; cursor: pointer; color: var(--text-muted); line-height: 1;">&times;</button>
+            </div>
+
+            <form action="{{ route($rolePrefix . 'census.monthly.export') }}" method="GET" target="_blank">
+                <div class="form-group">
+                    <label class="form-label">Pilih Ruangan:</label>
+                    <select name="room_id" class="form-select" required>
+                        @foreach($rooms as $r)
+                            <option value="{{ $r->id }}" {{ $r->id == $room->id ? 'selected' : '' }}>
+                                {{ $r->name }} ({{ $r->category }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                    <div class="form-group">
+                        <label class="form-label">Pilih Bulan:</label>
+                        <select name="month" class="form-select" required>
+                            @php
+                                $months = [
+                                    1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                                    5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                                    9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+                                ];
+                                $selectedMonth = (int) \Carbon\Carbon::parse($selectedDate)->month;
+                            @endphp
+                            @foreach($months as $num => $name)
+                                <option value="{{ $num }}" {{ $num == $selectedMonth ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Pilih Tahun:</label>
+                        <select name="year" class="form-select" required>
+                            @php
+                                $selectedYear = (int) \Carbon\Carbon::parse($selectedDate)->year;
+                                $years = range(2024, 2028);
+                            @endphp
+                            @foreach($years as $y)
+                                <option value="{{ $y }}" {{ $y == $selectedYear ? 'selected' : '' }}>
+                                    {{ $y }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeExportModal()">Batal</button>
+                    <button type="submit" class="btn btn-success" style="font-weight: 700;" onclick="setTimeout(closeExportModal, 500)">
+                        <i class="fa-solid fa-download"></i> Download Excel (.csv)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 @endsection
 
 @push('scripts')
@@ -242,6 +320,14 @@
 
     function closeDischargeModal() {
         document.getElementById('dischargeModal').style.display = 'none';
+    }
+
+    function openExportModal() {
+        document.getElementById('exportModal').style.display = 'flex';
+    }
+
+    function closeExportModal() {
+        document.getElementById('exportModal').style.display = 'none';
     }
 </script>
 @endpush

@@ -51,7 +51,7 @@
                 @if($user->isAdminRuang() && $user->room)
                 <div class="form-group">
                     <label class="form-label">Ruangan Penugasan:</label>
-                    <input type="text" class="form-control" value="{{ $user->room->name }} ({{ $user->room->floor }})" readonly style="background: #f1f5f9; cursor: not-allowed;">
+                    <input type="text" class="form-control" value="{{ $user->room->name }} ({{ $user->room->room_class }})" readonly style="background: #f1f5f9; cursor: not-allowed;">
                 </div>
                 @endif
 

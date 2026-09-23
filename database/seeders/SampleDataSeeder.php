@@ -72,9 +72,30 @@ class SampleDataSeeder extends Seeder
 
         $patientIndex = 1000;
 
+        // Truncate tables for a clean seed
+        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+        PatientTransfer::truncate();
+        DailyCensus::truncate();
+        Admission::truncate();
+        Patient::truncate();
+        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+
         foreach ($rooms as $room) {
-            // Seed 2-4 Pasien Aktif Dirawat di setiap ruangan
-            $activeCount = rand(2, 4);
+            // Variasikan kelas untuk ruangan ini agar setiap tab sheet kelas terisi data dummy
+            $roomClasses = [$room->room_class];
+            if ($room->category === 'Grand Paviliun') {
+                $roomClasses = ['VIP', 'VVIP', 'Kelas 1'];
+            } elseif (str_contains($room->category, 'IPJT')) {
+                $roomClasses = ['VIP', 'Kelas 1', 'Kelas 2', 'Kelas 3'];
+            } elseif (str_contains($room->category, 'IPIT')) {
+                $roomClasses = ['Kelas 1', 'Kelas 2', 'Kelas 3'];
+            } else {
+                $roomClasses = array_unique([$room->room_class, 'Kelas 1', 'Kelas 2', 'Kelas 3', 'VIP']);
+            }
+            $roomClasses = array_values($roomClasses);
+
+            // Seed 4-6 Pasien Aktif Dirawat di setiap ruangan (terbagi di berbagai kelas)
+            $activeCount = max(4, count($roomClasses) * 2);
             for ($i = 0; $i < $activeCount; $i++) {
                 $gender = rand(0, 1) ? 'L' : 'P';
                 $fn = ($gender === 'L') ? $firstNamesL[array_rand($firstNamesL)] : $firstNamesP[array_rand($firstNamesP)];
@@ -82,12 +103,14 @@ class SampleDataSeeder extends Seeder
                 $patientIndex++;
 
                 $patient = Patient::create([
-                    'rm_number' => 'RM-' . sprintf('%06d', $patientIndex),
+                    'rm_number' => sprintf('120%05d', $patientIndex),
                     'name' => "$fn $ln",
                     'gender' => $gender,
                     'address' => 'Kota Malang / Kab. Malang',
                     'phone' => '08' . rand(111111111, 999999999),
                 ]);
+
+                $assignedClass = $roomClasses[$i % count($roomClasses)];
 
                 // Tanggal MRS: Sebagian MRS bulan lalu (Carried Over), sebagian bulan ini
                 $isLastMonth = rand(0, 3) === 0;
@@ -99,14 +122,15 @@ class SampleDataSeeder extends Seeder
                     'patient_id' => $patient->id,
                     'current_room_id' => $room->id,
                     'initial_room_id' => $room->id,
+                    'room_class' => $assignedClass,
                     'admission_date' => $admissionDate,
                     'status' => 'active',
                     'diagnosis' => $diagnoses[array_rand($diagnoses)],
                 ]);
             }
 
-            // Seed 3-5 Pasien KRS (Keluar/Discharged/Deceased) di setiap ruangan
-            $dischargedCount = rand(3, 5);
+            // Seed 5-8 Pasien KRS (Keluar/Discharged/Deceased) di setiap ruangan (terbagi di berbagai kelas)
+            $dischargedCount = max(5, count($roomClasses) * 2);
             for ($j = 0; $j < $dischargedCount; $j++) {
                 $gender = rand(0, 1) ? 'L' : 'P';
                 $fn = ($gender === 'L') ? $firstNamesL[array_rand($firstNamesL)] : $firstNamesP[array_rand($firstNamesP)];
@@ -114,12 +138,14 @@ class SampleDataSeeder extends Seeder
                 $patientIndex++;
 
                 $patient = Patient::create([
-                    'rm_number' => 'RM-' . sprintf('%06d', $patientIndex),
+                    'rm_number' => sprintf('120%05d', $patientIndex),
                     'name' => "$fn $ln",
                     'gender' => $gender,
                     'address' => 'Kota Malang / Kab. Malang',
                     'phone' => '08' . rand(111111111, 999999999),
                 ]);
+
+                $assignedClass = $roomClasses[$j % count($roomClasses)];
 
                 // Berbagai Kasus Spesifik:
                 // 0: One Day Care (MRS & KRS hari yang sama)
@@ -170,6 +196,7 @@ class SampleDataSeeder extends Seeder
                     'patient_id' => $patient->id,
                     'current_room_id' => $room->id,
                     'initial_room_id' => $room->id,
+                    'room_class' => $assignedClass,
                     'admission_date' => $admDate,
                     'discharge_date' => $discDate,
                     'discharge_condition' => $condition,

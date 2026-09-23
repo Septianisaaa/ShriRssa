@@ -61,8 +61,20 @@ class TransferController extends Controller
 
             // Update lokasi ruangan aktif pasien ke ruangan baru
             $admission = $transfer->admission;
+            $fromRoom = $transfer->fromRoom;
+            $toRoom = $transfer->toRoom;
+
             $admission->current_room_id = $transfer->to_room_id;
             $admission->save();
+
+            // Sync sensus harian secara real-time untuk ruangan asal dan ruangan tujuan
+            $transferDateStr = Carbon::parse($transfer->transfer_date)->toDateString();
+            if ($fromRoom) {
+                \App\Services\CensusCalculatorService::syncRoomDate($fromRoom, $transferDateStr);
+            }
+            if ($toRoom) {
+                \App\Services\CensusCalculatorService::syncRoomDate($toRoom, $transferDateStr);
+            }
         });
 
         return redirect()->back()->with('success', 'Mutasi Pasien (Transfer In) berhasil dikonfirmasi! Data pasien otomatis berpindah ke ruangan Anda.');

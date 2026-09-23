@@ -501,9 +501,9 @@
 
             @if($isSuper)
             <li class="nav-item {{ request()->routeIs('*users.*') ? 'active' : '' }}">
-                <a href="{{ route('shri.users.index') }}" title="Kelola Admin Ruang">
+                <a href="{{ route('shri.users.index') }}" title="Kelola Akun">
                     <i class="fa-solid fa-users-gear"></i>
-                    <span class="nav-text">Kelola Admin Ruang</span>
+                    <span class="nav-text">Kelola Akun</span>
                 </a>
             </li>
             @endif
@@ -536,6 +536,10 @@
             </div>
             
             <div class="user-header-area">
+                <div style="background: #f8fafc; border: 1px solid var(--border-light); padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.775rem; font-weight: 600; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;" title="Waktu Server / Real-time Sistem">
+                    <i class="fa-regular fa-clock" style="color: #d97706;"></i>
+                    <span id="liveRealtimeClock">--:--:--</span>
+                </div>
                 <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" class="header-logo">
                 <div class="user-pill">
                     <div>
@@ -544,7 +548,7 @@
                         </div>
                         <div style="font-size: 0.725rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem;">
                             @if($isSuper)
-                                <span class="badge badge-info" style="font-size: 0.65rem;">Petugas SHRI (Superadmin)</span>
+                                <span class="badge badge-info" style="font-size: 0.65rem;">Admin (Petugas SHRI)</span>
                             @else
                                 <span class="badge badge-success" style="font-size: 0.65rem;">Admin {{ $authUser->room ? $authUser->room->name : 'Ruangan' }}</span>
                             @endif
@@ -584,6 +588,28 @@
             var isCollapsed = document.documentElement.classList.toggle('sidebar-collapsed');
             localStorage.setItem('shri_sidebar_collapsed', isCollapsed ? 'true' : 'false');
         }
+
+        function updateLiveClock() {
+            var now = new Date();
+            var days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            
+            var dayName = days[now.getDay()];
+            var dayDate = String(now.getDate()).padStart(2, '0');
+            var monthName = months[now.getMonth()];
+            var year = now.getFullYear();
+            var hours = String(now.getHours()).padStart(2, '0');
+            var minutes = String(now.getMinutes()).padStart(2, '0');
+            var seconds = String(now.getSeconds()).padStart(2, '0');
+
+            var formatted = dayName + ', ' + dayDate + ' ' + monthName + ' ' + year + ' • ' + hours + ':' + minutes + ':' + seconds + ' WIB';
+            var clockEl = document.getElementById('liveRealtimeClock');
+            if (clockEl) {
+                clockEl.innerText = formatted;
+            }
+        }
+        setInterval(updateLiveClock, 1000);
+        updateLiveClock();
     </script>
     @stack('scripts')
 </body>

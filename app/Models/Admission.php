@@ -13,6 +13,7 @@ class Admission extends Model
         'patient_id',
         'current_room_id',
         'initial_room_id',
+        'room_class',
         'admission_date',
         'status',
         'discharge_date',
@@ -34,6 +35,11 @@ class Admission extends Model
     public function currentRoom(): BelongsTo
     {
         return $this->belongsTo(Room::class, 'current_room_id');
+    }
+
+    public function initialRoom(): BelongsTo
+    {
+        return $this->belongsTo(Room::class, 'initial_room_id');
     }
 
     public function transfers(): HasMany

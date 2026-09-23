@@ -2,7 +2,7 @@
 
 @section('title', 'Dashboard Utama - SHRI RSUD Dr. Saiful Anwar')
 @section('header_title', 'Dashboard Sensus Ruangan')
-@section('header_subtitle', 'Keterisian Tempat Tidur & Status Ruangan RSUD Dr. Saiful Anwar')
+@section('header_subtitle', 'Ketersediaan Tempat Tidur & Status Ruangan RSUD Dr. Saiful Anwar')
 
 @push('styles')
 <style>
@@ -98,7 +98,7 @@
 
         <div class="stat-card" style="border-top: 3px solid #dc2626;">
             <div class="stat-label">Pending Mutasi</div>
-            <div class="stat-value">{{ $pendingTransfers }}</div>
+            <div class="stat-value" style="color: {{ $pendingTransfers > 0 ? '#dc2626' : 'var(--text-dark)' }};">{{ $pendingTransfers }}</div>
         </div>
     </div>
 
@@ -130,7 +130,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
                         <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-dark); letter-spacing: -0.01em;">{{ $room->name }}</h4>
-                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">{{ $room->floor }} | Kode: {{ $room->code }}</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">Kelas: {{ $room->room_class }} | Kode: {{ $room->code }}</span>
                     </div>
                     <span class="badge badge-info" style="font-size: 0.7rem;">{{ $room->category }}</span>
                 </div>

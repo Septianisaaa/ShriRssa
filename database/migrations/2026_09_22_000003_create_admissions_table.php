@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
             $table->foreignId('current_room_id')->constrained('rooms')->onDelete('cascade');
             $table->foreignId('initial_room_id')->nullable()->constrained('rooms')->onDelete('set null');
+            $table->string('room_class')->nullable(); // Kelas Perawatan (VVIP, VIP, Kelas 1, Kelas 2, Kelas 3)
             $table->dateTime('admission_date'); // Tanggal & jam masuk (bisa bulan/tahun lalu)
             $table->enum('status', ['active', 'discharged', 'transferred', 'deceased'])->default('active');
             $table->dateTime('discharge_date')->nullable();

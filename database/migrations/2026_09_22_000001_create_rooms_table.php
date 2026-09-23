@@ -12,8 +12,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('code')->unique();
-            $table->string('category'); // Lantai, Intensive/ICU, HCU, Paviliun, Perawatan Umum
-            $table->string('floor')->nullable(); // Lantai 2, Lantai 3, Lantai 4, Lantai 6, Lantai 7, Lantai 8
+            $table->string('category'); // Instalasi (IPIT, IRNA 1, IRNA 2, IRNA 3, IRNA 4, IPJT, Paviliun, dll)
+            $table->string('room_class'); // VIP, VVIP, Kelas 1, Kelas 2, Kelas 3
             $table->integer('capacity')->default(10); // Kapasitas tempat tidur (TT)
             $table->boolean('is_active')->default(true);
             $table->timestamps();

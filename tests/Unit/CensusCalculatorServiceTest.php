@@ -19,7 +19,7 @@ class CensusCalculatorServiceTest extends TestCase
             'name' => 'Ruang Barito',
             'code' => 'R-BRT',
             'category' => 'Perawatan Umum',
-            'floor' => 'Lantai 2',
+            'room_class' => 'Kelas 1',
             'capacity' => 10,
         ]);
 
@@ -47,7 +47,7 @@ class CensusCalculatorServiceTest extends TestCase
             'name' => 'Ruang Barito',
             'code' => 'R-BRT',
             'category' => 'Perawatan Umum',
-            'floor' => 'Lantai 2',
+            'room_class' => 'Kelas 1',
             'capacity' => 10,
         ]);
 
@@ -75,7 +75,7 @@ class CensusCalculatorServiceTest extends TestCase
             'name' => 'Ruang Barito',
             'code' => 'R-BRT',
             'category' => 'Perawatan Umum',
-            'floor' => 'Lantai 2',
+            'room_class' => 'Kelas 1',
             'capacity' => 10,
         ]);
 
