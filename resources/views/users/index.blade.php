@@ -48,12 +48,25 @@
 
                 <div class="form-group">
                     <label class="form-label">Password:</label>
-                    <input type="password" name="password" class="form-control" required>
+                    <div style="position: relative;">
+                        <input type="password" name="password" id="user_new_password" class="form-control" style="padding-right: 2.5rem;" required>
+                        <button type="button" onclick="togglePasswordVisibility('user_new_password', this)" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 0.35rem; font-size: 0.9rem;" title="Lihat/Sembunyikan Password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    <small style="color: #64748b; font-size: 0.725rem; margin-top: 0.25rem; display: block;">
+                        Minimal 8 karakter (kombinasi huruf, angka, &amp; simbol).
+                    </small>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Konfirmasi Password:</label>
-                    <input type="password" name="password_confirmation" class="form-control" required>
+                    <div style="position: relative;">
+                        <input type="password" name="password_confirmation" id="user_confirm_password" class="form-control" style="padding-right: 2.5rem;" required>
+                        <button type="button" onclick="togglePasswordVisibility('user_confirm_password', this)" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 0.35rem; font-size: 0.9rem;" title="Lihat/Sembunyikan Password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
@@ -146,3 +159,22 @@
     </div>
 
 @endsection
+
+@push('scripts')
+<script>
+    function togglePasswordVisibility(fieldId, btnEl) {
+        var field = document.getElementById(fieldId);
+        if (!field) return;
+        var icon = btnEl.querySelector('i');
+        if (field.type === 'password') {
+            field.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            field.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+</script>
+@endpush

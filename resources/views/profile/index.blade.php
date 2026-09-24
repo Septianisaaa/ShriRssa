@@ -69,20 +69,38 @@
                 @csrf
                 <div class="form-group">
                     <label class="form-label">Password Saat Ini:</label>
-                    <input type="password" name="current_password" class="form-control" required>
+                    <div style="position: relative;">
+                        <input type="password" name="current_password" id="profile_current_password" class="form-control" style="padding-right: 2.5rem;" required>
+                        <button type="button" onclick="togglePasswordVisibility('profile_current_password', this)" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 0.35rem; font-size: 0.9rem;" title="Lihat/Sembunyikan Password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Password Baru:</label>
-                    <input type="password" name="password" class="form-control" required>
+                    <div style="position: relative;">
+                        <input type="password" name="password" id="profile_new_password" class="form-control" style="padding-right: 2.5rem;" required>
+                        <button type="button" onclick="togglePasswordVisibility('profile_new_password', this)" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 0.35rem; font-size: 0.9rem;" title="Lihat/Sembunyikan Password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    <small style="color: #64748b; font-size: 0.725rem; margin-top: 0.25rem; display: block;">
+                        Minimal 8 karakter (kombinasi huruf, angka, &amp; simbol).
+                    </small>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Konfirmasi Password Baru:</label>
-                    <input type="password" name="password_confirmation" class="form-control" required>
+                    <div style="position: relative;">
+                        <input type="password" name="password_confirmation" id="profile_confirm_password" class="form-control" style="padding-right: 2.5rem;" required>
+                        <button type="button" onclick="togglePasswordVisibility('profile_confirm_password', this)" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 0.35rem; font-size: 0.9rem;" title="Lihat/Sembunyikan Password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <button type="submit" class="btn btn-secondary" style="width: 100%; justify-content: center; font-weight: 700;">
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; font-weight: 700;">
                     Perbarui Password
                 </button>
             </form>
@@ -91,3 +109,22 @@
     </div>
 
 @endsection
+
+@push('scripts')
+<script>
+    function togglePasswordVisibility(fieldId, btnEl) {
+        var field = document.getElementById(fieldId);
+        if (!field) return;
+        var icon = btnEl.querySelector('i');
+        if (field.type === 'password') {
+            field.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            field.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+</script>
+@endpush

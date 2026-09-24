@@ -9,19 +9,32 @@ use App\Models\DailyCensus;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class CensusController extends Controller
+class SensusController extends Controller
 {
     public function index(Request $request)
     {
         $user = auth()->user();
-        $defaultRoomId = ($user && $user->isAdminRuang() && $user->room_id) ? $user->room_id : Room::first()?->id;
-        $selectedRoomId = $request->get('room_id', $defaultRoomId);
+        $allRooms = Room::where('is_active', true)->get();
+
+        if ($user && $user->isAdminRuang() && $user->room_id) {
+            $selectedRoomId = $user->room_id;
+            $rooms = Room::where('id', $user->room_id)->get();
+        } else {
+            $defaultRoomId = Room::first()?->id;
+            $selectedRoomId = $request->get('room_id', $defaultRoomId);
+            $rooms = $allRooms;
+        }
+
         $selectedDate = $request->get('date', Carbon::today()->toDateString());
 
-        $room = Room::findOrFail($selectedRoomId);
-        $rooms = Room::where('is_active', true)->get();
+        if (!$selectedRoomId || !Room::where('id', $selectedRoomId)->exists()) {
+            $rolePrefix = ($user && $user->isSuperAdmin()) ? 'shri.' : 'admin_ruang.';
+            return redirect()->route($rolePrefix . 'dashboard')
+                ->withErrors(['room' => 'Data ruangan belum tersedia. Silakan jalankan seeder database terlebih dahulu (php artisan db:seed).']);
+        }
+
+        $room = Room::find($selectedRoomId);
 
         // Real-Time auto sync sensus harian untuk tanggal pilihan
         \App\Services\CensusCalculatorService::syncRoomDate($room, $selectedDate);
@@ -37,20 +50,25 @@ class CensusController extends Controller
             ->with('patient')
             ->get();
 
-        return view('census.index', compact('room', 'rooms', 'selectedDate', 'census', 'activeAdmissions'));
+        return view('sensus.index', compact('room', 'rooms', 'allRooms', 'selectedDate', 'census', 'activeAdmissions'));
     }
 
     public function storePatient(Request $request)
     {
+        $user = auth()->user();
         $validated = $request->validate([
             'rm_number' => 'required|string',
             'name' => 'required|string|max:255',
             'gender' => 'required|in:L,P',
             'room_id' => 'required|exists:rooms,id',
             'room_class' => 'nullable|string|max:50',
-            'admission_date' => 'required|date', // Mendukung tanggal & jam lengkap (bisa bulan lalu)
+            'admission_date' => 'required|date',
             'diagnosis' => 'nullable|string',
         ]);
+
+        if ($user && $user->isAdminRuang() && $user->room_id) {
+            $validated['room_id'] = $user->room_id;
+        }
 
         DB::transaction(function () use ($validated) {
             $patient = Patient::firstOrCreate(
@@ -73,17 +91,21 @@ class CensusController extends Controller
                 'diagnosis' => $validated['diagnosis'] ?? null,
             ]);
 
-            // Sync sensus harian secara real-time
             if ($selectedRoom) {
                 \App\Services\CensusCalculatorService::syncRoomDate($selectedRoom, Carbon::parse($validated['admission_date'])->toDateString());
             }
         });
 
-        return redirect()->back()->with('success', 'Data Pasien Masuk berhasil dicatat dengan tanggal & jam MRS lengkap!');
+        return redirect()->back()->with('success', 'Data Pasien Masuk berhasil dicatat!');
     }
 
     public function dischargePatient(Request $request, Admission $admission)
     {
+        $user = auth()->user();
+        if ($user && $user->isAdminRuang() && $user->room_id && $admission->current_room_id != $user->room_id) {
+            abort(403, 'Anda tidak memiliki akses untuk memproses pasien di ruangan lain.');
+        }
+
         $validated = $request->validate([
             'discharge_date' => 'required|date|after_or_equal:' . $admission->admission_date->toDateString(),
             'discharge_condition' => 'required|in:cured,improved,unimproved,referred,aps,deceased,deceased_under_48h,deceased_over_48h',
@@ -93,7 +115,6 @@ class CensusController extends Controller
             $admission->discharge_date = $validated['discharge_date'];
             
             $condition = $validated['discharge_condition'];
-            // Pembacaan otomatis meninggal < 48 jam vs >= 48 jam
             if ($condition === 'deceased') {
                 $condition = $admission->determineDeceasedCategory($validated['discharge_date']);
             }
@@ -103,7 +124,6 @@ class CensusController extends Controller
             $admission->length_of_stay = $admission->calculateLengthOfStay();
             $admission->save();
 
-            // Sync sensus harian secara real-time
             if ($admission->currentRoom) {
                 \App\Services\CensusCalculatorService::syncRoomDate($admission->currentRoom, Carbon::parse($validated['discharge_date'])->toDateString());
             }
@@ -116,22 +136,31 @@ class CensusController extends Controller
         return redirect()->back()->with('success', "Pasien KRS berhasil diproses ({$conditionLabel})! Lama Dirawat (LD): {$admission->length_of_stay} hari.");
     }
 
-    /**
-     * Tampilan Rekap Sensus Bulanan
-     */
     public function monthly(Request $request)
     {
+        $user = auth()->user();
         $year = (int) $request->get('year', date('Y'));
         $month = (int) $request->get('month', date('n'));
-        $roomId = $request->get('room_id', Room::first()?->id);
 
-        $selectedRoom = Room::findOrFail($roomId);
-        $rooms = Room::where('is_active', true)->get();
+        if ($user && $user->isAdminRuang() && $user->room_id) {
+            $roomId = $user->room_id;
+            $rooms = Room::where('id', $user->room_id)->get();
+        } else {
+            $roomId = $request->get('room_id', Room::first()?->id);
+            $rooms = Room::where('is_active', true)->get();
+        }
+
+        if (!$roomId || !Room::where('id', $roomId)->exists()) {
+            $rolePrefix = ($user && $user->isSuperAdmin()) ? 'shri.' : 'admin_ruang.';
+            return redirect()->route($rolePrefix . 'dashboard')
+                ->withErrors(['room' => 'Data ruangan belum tersedia. Silakan jalankan seeder database terlebih dahulu (php artisan db:seed).']);
+        }
+
+        $selectedRoom = Room::find($roomId);
 
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
         $daysInMonth = $startDate->daysInMonth;
 
-        // Ambil data pasien yang KRS di bulan ini
         $dischargedAdmissions = Admission::where('current_room_id', $selectedRoom->id)
             ->whereIn('status', ['discharged', 'deceased'])
             ->whereYear('discharge_date', $year)
@@ -139,19 +168,27 @@ class CensusController extends Controller
             ->with('patient')
             ->get();
 
-        return view('census.monthly', compact('selectedRoom', 'rooms', 'year', 'month', 'dischargedAdmissions', 'daysInMonth'));
+        return view('sensus.monthly', compact('selectedRoom', 'rooms', 'year', 'month', 'dischargedAdmissions', 'daysInMonth'));
     }
 
-    /**
-     * Export Rekap Sensus Bulanan ke format Excel (.xls) Resmi RSUD Dr. Saiful Anwar
-     */
     public function exportMonthly(Request $request)
     {
+        $user = auth()->user();
         $year = (int) $request->get('year', date('Y'));
         $month = (int) $request->get('month', date('n'));
-        $roomId = $request->get('room_id', Room::first()?->id);
 
-        $room = Room::findOrFail($roomId);
+        if ($user && $user->isAdminRuang() && $user->room_id) {
+            $roomId = $user->room_id;
+        } else {
+            $roomId = $request->get('room_id', Room::first()?->id);
+        }
+
+        if (!$roomId || !Room::where('id', $roomId)->exists()) {
+            return redirect()->back()
+                ->withErrors(['export' => 'Gagal mengunduh Excel: Data ruangan belum tersedia di database. Silakan jalankan seeder database (php artisan db:seed).']);
+        }
+
+        $room = Room::find($roomId);
         $fileName = "Rekap_Sensus_SHRI_{$room->code}_{$year}_{$month}.xls";
 
         // 1. Pasien Aktif Dirawat di Ruangan Ini

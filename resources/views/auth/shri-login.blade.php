@@ -206,7 +206,12 @@
 
             <div class="form-group">
                 <label class="form-label">Password:</label>
-                <input type="password" name="password" class="form-control" value="password" required>
+                <div style="position: relative;">
+                    <input type="password" name="password" id="shri_login_password" class="form-control" value="password" style="padding-right: 2.5rem;" required>
+                    <button type="button" onclick="togglePasswordVisibility('shri_login_password', this)" style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 0.35rem; font-size: 0.9rem;" title="Lihat/Sembunyikan Password">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
             </div>
 
             <button type="submit" class="btn btn-primary">
@@ -228,5 +233,21 @@
         </div>
     </div>
 
+    <script>
+        function togglePasswordVisibility(fieldId, btnEl) {
+            var field = document.getElementById(fieldId);
+            if (!field) return;
+            var icon = btnEl.querySelector('i');
+            if (field.type === 'password') {
+                field.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                field.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+    </script>
 </body>
 </html>

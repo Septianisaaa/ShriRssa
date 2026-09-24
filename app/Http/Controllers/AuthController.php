@@ -88,6 +88,11 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email',
             'phone' => 'nullable|string|max:20',
             'password' => ['required', 'confirmed', Password::defaults()],
+        ], [
+            'password.min' => 'Password minimal harus 8 karakter.',
+            'password.letters' => 'Password harus mengandung huruf.',
+            'password.numbers' => 'Password harus mengandung angka.',
+            'password.symbols' => 'Password harus mengandung simbol (contoh: @, #, $, !, %, dll).',
         ]);
 
         $user = User::create([

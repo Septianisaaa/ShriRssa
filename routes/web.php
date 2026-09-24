@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SensusController;
 use App\Http\Controllers\CensusController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\GuideController;
@@ -48,10 +49,16 @@ Route::middleware(['auth', 'role:superadmin'])->prefix('shri')->name('shri.')->g
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Sensus Harian & Pasien
-    Route::get('/census', [CensusController::class, 'index'])->name('census.index');
-    Route::post('/census/patient', [CensusController::class, 'storePatient'])->name('census.patient.store');
-    Route::post('/census/discharge/{admission}', [CensusController::class, 'dischargePatient'])->name('census.patient.discharge');
-    Route::get('/census/export', [CensusController::class, 'exportMonthly'])->name('census.monthly.export');
+    Route::get('/sensus', [SensusController::class, 'index'])->name('sensus.index');
+    Route::post('/sensus/patient', [SensusController::class, 'storePatient'])->name('sensus.patient.store');
+    Route::post('/sensus/discharge/{admission}', [SensusController::class, 'dischargePatient'])->name('sensus.patient.discharge');
+    Route::get('/sensus/export', [SensusController::class, 'exportMonthly'])->name('sensus.monthly.export');
+
+    // Legacy Census Routes Alias
+    Route::get('/census', [SensusController::class, 'index'])->name('census.index');
+    Route::post('/census/patient', [SensusController::class, 'storePatient'])->name('census.patient.store');
+    Route::post('/census/discharge/{admission}', [SensusController::class, 'dischargePatient'])->name('census.patient.discharge');
+    Route::get('/census/export', [SensusController::class, 'exportMonthly'])->name('census.monthly.export');
 
     // Mutasi Pindahan Pasien
     Route::get('/transfers', [TransferController::class, 'index'])->name('transfers.index');
@@ -81,10 +88,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin-ruang')->name('admin_ru
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Sensus Harian & Pasien (Edit)
-    Route::get('/census', [CensusController::class, 'index'])->name('census.index');
-    Route::post('/census/patient', [CensusController::class, 'storePatient'])->name('census.patient.store');
-    Route::post('/census/discharge/{admission}', [CensusController::class, 'dischargePatient'])->name('census.patient.discharge');
-    Route::get('/census/export', [CensusController::class, 'exportMonthly'])->name('census.monthly.export');
+    Route::get('/sensus', [SensusController::class, 'index'])->name('sensus.index');
+    Route::post('/sensus/patient', [SensusController::class, 'storePatient'])->name('sensus.patient.store');
+    Route::post('/sensus/discharge/{admission}', [SensusController::class, 'dischargePatient'])->name('sensus.patient.discharge');
+    Route::get('/sensus/export', [SensusController::class, 'exportMonthly'])->name('sensus.monthly.export');
+
+    // Legacy Census Routes Alias
+    Route::get('/census', [SensusController::class, 'index'])->name('census.index');
+    Route::post('/census/patient', [SensusController::class, 'storePatient'])->name('census.patient.store');
+    Route::post('/census/discharge/{admission}', [SensusController::class, 'dischargePatient'])->name('census.patient.discharge');
+    Route::get('/census/export', [SensusController::class, 'exportMonthly'])->name('census.monthly.export');
 
     // Mutasi Pindahan Pasien (Edit)
     Route::get('/transfers', [TransferController::class, 'index'])->name('transfers.index');

@@ -98,7 +98,9 @@
                                     <span class="badge badge-danger">Ditolak</span>
                                 @endif
                             </td>
-                            <td>{{ $ht->accepted_at ? $ht->accepted_at->format('d/m/Y H:i') : '-' }}</td>
+                            <td>
+                                {{ $ht->accepted_at ? $ht->accepted_at->format('d/m/Y H:i') : ($ht->updated_at ? $ht->updated_at->format('d/m/Y H:i') : '-') }}
+                            </td>
                         </tr>
                     @empty
                         <tr>

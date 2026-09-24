@@ -39,6 +39,11 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'current_password' => 'required|string',
             'password' => ['required', 'confirmed', Password::defaults()],
+        ], [
+            'password.min' => 'Password minimal harus 8 karakter.',
+            'password.letters' => 'Password harus mengandung huruf.',
+            'password.numbers' => 'Password harus mengandung angka.',
+            'password.symbols' => 'Password harus mengandung simbol (contoh: @, #, $, !, %, dll).',
         ]);
 
         $user = Auth::user();

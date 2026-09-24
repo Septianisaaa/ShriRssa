@@ -228,28 +228,34 @@ class SampleDataSeeder extends Seeder
             }
         }
 
-        // Seed 5-8 Mutasi Pindahan Pasien Antar Ruang (Pending & Accepted)
+        // Seed 8-10 Mutasi Pindahan Pasien Antar Ruang (Pending, Accepted, Rejected)
         $allAdmissions = Admission::where('status', 'active')->get();
         if ($allAdmissions->count() >= 5) {
-            $sampleAdmissions = $allAdmissions->random(min(8, $allAdmissions->count()));
+            $sampleAdmissions = $allAdmissions->random(min(10, $allAdmissions->count()));
+            $index = 0;
             foreach ($sampleAdmissions as $adm) {
                 $targetRoom = Room::where('id', '!=', $adm->current_room_id)->inRandomOrder()->first();
                 if ($targetRoom) {
-                    $isPending = rand(0, 1) === 1;
+                    $statusType = $index % 3; // 0: pending, 1: accepted, 2: rejected
+                    $status = ($statusType === 0) ? 'pending' : (($statusType === 1) ? 'accepted' : 'rejected');
+                    $transferDate = Carbon::now()->subHours(rand(12, 72));
+                    $confirmedAt = ($status === 'pending') ? null : $transferDate->copy()->addHours(rand(1, 8));
+
                     PatientTransfer::create([
                         'admission_id' => $adm->id,
                         'from_room_id' => $adm->current_room_id,
                         'to_room_id' => $targetRoom->id,
-                        'transfer_date' => Carbon::now()->subHours(rand(1, 48)),
-                        'status' => $isPending ? 'pending' : 'accepted',
-                        'accepted_at' => $isPending ? null : Carbon::now()->subHours(rand(1, 10)),
+                        'transfer_date' => $transferDate,
+                        'status' => $status,
+                        'accepted_at' => $confirmedAt,
                         'notes' => 'Alih perawatan / perbaikan kondisi indikasi medis',
                     ]);
 
-                    if (!$isPending) {
+                    if ($status === 'accepted') {
                         $adm->current_room_id = $targetRoom->id;
                         $adm->save();
                     }
+                    $index++;
                 }
             }
         }

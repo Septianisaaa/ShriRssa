@@ -14,7 +14,7 @@
 
     <!-- Selector Bar & Export Button -->
     <div class="card" style="padding: 1rem 1.25rem; margin-bottom: 1.25rem;">
-        <form method="GET" action="{{ route($rolePrefix . 'census.index') }}" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+        <form method="GET" action="{{ route($rolePrefix . 'sensus.index') }}" style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
             <div style="flex: 1; min-width: 240px;">
                 <label class="form-label">Pilih Ruangan:</label>
                 @if($isSuper)
@@ -49,7 +49,7 @@
         <div class="card">
             <h3 class="section-title">Form Pasien Masuk (MRS)</h3>
 
-            <form action="{{ route($rolePrefix . 'census.patient.store') }}" method="POST">
+            <form action="{{ route($rolePrefix . 'sensus.patient.store') }}" method="POST">
                 @csrf
                 <input type="hidden" name="room_id" value="{{ $room->id }}">
 
@@ -247,7 +247,7 @@
                 <button type="button" onclick="closeExportModal()" style="background: none; border: none; font-size: 1.35rem; cursor: pointer; color: var(--text-muted); line-height: 1;">&times;</button>
             </div>
 
-            <form action="{{ route($rolePrefix . 'census.monthly.export') }}" method="GET" target="_blank">
+            <form action="{{ route($rolePrefix . 'sensus.monthly.export') }}" method="GET" target="_blank">
                 <div class="form-group">
                     <label class="form-label">Pilih Ruangan:</label>
                     @if($isSuper)
@@ -303,7 +303,7 @@
                 <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem;">
                     <button type="button" class="btn btn-secondary" onclick="closeExportModal()">Batal</button>
                     <button type="submit" class="btn btn-success" style="font-weight: 700;" onclick="setTimeout(closeExportModal, 500)">
-                        <i class="fa-solid fa-download"></i> Download Excel (.csv)
+                        <i class="fa-solid fa-download"></i> Download Excel (.xls)
                     </button>
                 </div>
             </form>
@@ -319,7 +319,7 @@
         var routePrefix = isSuper ? '/shri' : '/admin-ruang';
         
         document.getElementById('modalPatientTitle').innerText = 'Proses KRS: ' + patientName;
-        document.getElementById('dischargeForm').action = routePrefix + '/census/discharge/' + admissionId;
+        document.getElementById('dischargeForm').action = routePrefix + '/sensus/discharge/' + admissionId;
         
         var now = new Date();
         var localNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
@@ -341,5 +341,3 @@
     }
 </script>
 @endpush
-
-

@@ -346,14 +346,19 @@
             background: #15803d;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         .btn-secondary {
-            background: #ffffff;
-            color: var(--text-dark);
-            border-color: var(--border-color);
+            background: #f1f5f9;
+            color: #1e293b;
+            border-color: #cbd5e1;
         }
 
         .btn-secondary:hover {
-            background: var(--bg-app);
+            background: #e2e8f0;
+            color: #0f172a;
         }
 
         /* Form Controls */
@@ -480,8 +485,8 @@
                     <span class="nav-text">Dashboard Utama</span>
                 </a>
             </li>
-            <li class="nav-item {{ request()->routeIs('*census.*') ? 'active' : '' }}">
-                <a href="{{ route($rolePrefix . 'census.index') }}" title="Sensus Harian">
+            <li class="nav-item {{ (request()->routeIs('*sensus.*') || request()->routeIs('*census.*')) ? 'active' : '' }}">
+                <a href="{{ route($rolePrefix . 'sensus.index') }}" title="Sensus Harian">
                     <i class="fa-solid fa-hospital-user"></i>
                     <span class="nav-text">Sensus Harian</span>
                 </a>
@@ -536,11 +541,6 @@
             </div>
             
             <div class="user-header-area">
-                <div style="background: #f8fafc; border: 1px solid var(--border-light); padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.775rem; font-weight: 600; color: var(--text-dark); display: flex; align-items: center; gap: 0.5rem;" title="Waktu Server / Real-time Sistem">
-                    <i class="fa-regular fa-clock" style="color: #d97706;"></i>
-                    <span id="liveRealtimeClock">--:--:--</span>
-                </div>
-                <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" class="header-logo">
                 <div class="user-pill">
                     <div>
                         <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-dark);">
@@ -550,7 +550,7 @@
                             @if($isSuper)
                                 <span class="badge badge-info" style="font-size: 0.65rem;">Admin (Petugas SHRI)</span>
                             @else
-                                <span class="badge badge-success" style="font-size: 0.65rem;">Admin {{ $authUser->room ? $authUser->room->name : 'Ruangan' }}</span>
+                                <span class="badge badge-success" style="font-size: 0.65rem;">Admin {{ $authUser && $authUser->room ? $authUser->room->name : 'Ruangan' }}</span>
                             @endif
                         </div>
                     </div>
@@ -588,28 +588,6 @@
             var isCollapsed = document.documentElement.classList.toggle('sidebar-collapsed');
             localStorage.setItem('shri_sidebar_collapsed', isCollapsed ? 'true' : 'false');
         }
-
-        function updateLiveClock() {
-            var now = new Date();
-            var days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-            
-            var dayName = days[now.getDay()];
-            var dayDate = String(now.getDate()).padStart(2, '0');
-            var monthName = months[now.getMonth()];
-            var year = now.getFullYear();
-            var hours = String(now.getHours()).padStart(2, '0');
-            var minutes = String(now.getMinutes()).padStart(2, '0');
-            var seconds = String(now.getSeconds()).padStart(2, '0');
-
-            var formatted = dayName + ', ' + dayDate + ' ' + monthName + ' ' + year + ' • ' + hours + ':' + minutes + ':' + seconds + ' WIB';
-            var clockEl = document.getElementById('liveRealtimeClock');
-            if (clockEl) {
-                clockEl.innerText = formatted;
-            }
-        }
-        setInterval(updateLiveClock, 1000);
-        updateLiveClock();
     </script>
     @stack('scripts')
 </body>
