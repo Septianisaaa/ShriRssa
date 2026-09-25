@@ -105,7 +105,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin-ruang')->name('admin_ru
     Route::post('/transfers/{transfer}/accept', [TransferController::class, 'accept'])->name('transfers.accept');
     Route::post('/transfers/{transfer}/reject', [TransferController::class, 'reject'])->name('transfers.reject');
 
-    // Buku Panduan Pengguna (Bukpa - View Only)
+    // Buku Panduan Pengguna (Bukpan - View Only)
     Route::get('/guide', [GuideController::class, 'index'])->name('guide.index');
 
     // User Profile

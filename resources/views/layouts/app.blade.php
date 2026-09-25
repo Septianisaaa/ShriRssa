@@ -494,7 +494,7 @@
             <li class="nav-item {{ request()->routeIs('*transfers.*') ? 'active' : '' }}">
                 <a href="{{ route($rolePrefix . 'transfers.index') }}" title="Mutasi Pindahan">
                     <i class="fa-solid fa-right-left"></i>
-                    <span class="nav-text">Mutasi Pindahan</span>
+                    <span class="nav-text">Mutasi Pasien</span>
                 </a>
             </li>
             <li class="nav-item {{ request()->routeIs('*guide.*') ? 'active' : '' }}">

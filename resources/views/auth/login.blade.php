@@ -269,13 +269,6 @@
                     </button>
                 </form>
 
-                <div class="credential-box">
-                    <strong>Demo Credential (Petugas SHRI):</strong><br>
-                    Username / Email: <code>shri</code> / <code>shri@rssa.go.id</code><br>
-                    Password: <code>password</code>
-                </div>
-            </div>
-
             <!-- TAB 2: LOGIN ADMIN RUANGAN (ADMIN) -->
             <div id="tab_admin_login" style="display: {{ $tab === 'admin_login' ? 'block' : 'none' }};">
                 <form action="{{ route('admin_ruang.login.post') }}" method="POST">
@@ -294,13 +287,6 @@
                         Masuk Admin Ruangan
                     </button>
                 </form>
-
-                <div class="credential-box">
-                    <strong>Demo Credential (Admin Ruang):</strong><br>
-                    Username / Email: <code>adminruang</code> / <code>admin.ruang@rssa.go.id</code><br>
-                    Password: <code>password</code>
-                </div>
-            </div>
 
             <!-- TAB 3: REGISTRASI PETUGAS SHRI (SUPERADMIN) -->
             <div id="tab_shri_register" style="display: {{ $tab === 'shri_register' ? 'block' : 'none' }};">

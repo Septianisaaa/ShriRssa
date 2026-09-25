@@ -15,6 +15,7 @@ class Admission extends Model
         'initial_room_id',
         'room_class',
         'admission_date',
+        'admission_type',
         'status',
         'discharge_date',
         'discharge_condition',

@@ -11,165 +11,343 @@ use Carbon\Carbon;
 class CensusCalculatorService
 {
     /**
-     * Sinkronisasi & hitung ulang data Sensus Harian (DailyCensus) secara real-time
+     * Sinkronisasi & hitung ulang Sensus Harian berdasarkan
+     * posisi pasien pada tanggal sensus.
+     *
+     * LOGIKA:
+     * - Pasien MRS baru       -> Admissions
+     * - Pasien pindahan masuk -> PatientTransfer ke ruangan tujuan
+     * - Pasien pindahan keluar -> PatientTransfer dari ruangan asal
+     * - Pasien sisa           -> pasien yang memang berada di ruangan
+     *                            pada awal hari
+     * - LD                    -> tetap dihitung dari MRS pertama
      */
     public static function syncRoomDate(Room $room, string $date): DailyCensus
-    {
-        $start = Carbon::parse($date)->startOfDay();
-        $end = Carbon::parse($date)->endOfDay();
+{
+    $start = Carbon::parse($date)->startOfDay();
+    $end = Carbon::parse($date)->endOfDay();
 
-        // 1. Pasien Awal (Pasien aktif di ruangan pada jam 00:00:00 tanggal tersebut)
-        $initialPatients = Admission::where('current_room_id', $room->id)
-            ->where('admission_date', '<', $start)
-            ->where(function ($q) use ($start) {
-                $q->whereNull('discharge_date')
-                  ->orWhere('discharge_date', '>=', $start);
-            })
-            ->count();
+    /*
+    |--------------------------------------------------------------------------
+    | 1. PASIEN AWAL
+    |--------------------------------------------------------------------------
+    | Pasien yang sudah berada di ruangan sebelum tanggal sensus
+    | dan belum KRS / meninggal sebelum tanggal tersebut.
+    |
+    */
+    $initialPatients = Admission::where('current_room_id', $room->id)
+        ->where('admission_date', '<', $start)
+        ->where(function ($q) use ($start) {
+            $q->whereNull('discharge_date')
+                ->orWhere('discharge_date', '>=', $start);
+        })
+        ->count();
 
-        // 2. Pasien Masuk (MRS) pada tanggal ini
-        $admissionsCount = Admission::where('initial_room_id', $room->id)
-            ->whereBetween('admission_date', [$start, $end])
-            ->count();
 
-        // 3. Mutasi Pindahan Masuk (Transfer In) pada tanggal ini
-        $transfersInCount = PatientTransfer::where('to_room_id', $room->id)
-            ->where('status', 'accepted')
-            ->where(function ($q) use ($start, $end) {
-                $q->whereBetween('accepted_at', [$start, $end])
-                  ->orWhereBetween('transfer_date', [$start, $end]);
-            })
-            ->count();
+    /*
+    |--------------------------------------------------------------------------
+    | 2. PASIEN BARU / MRS
+    |--------------------------------------------------------------------------
+    | Hanya pasien yang benar-benar MRS pertama kali di ruangan tersebut.
+    |
+    | Pasien pindahan TIDAK dihitung sebagai MRS.
+    |
+    */
+    $admissionsCount = Admission::where('initial_room_id', $room->id)
+        ->whereBetween('admission_date', [$start, $end])
+        ->count();
 
-        // 4. Mutasi Pindahan Keluar (Transfer Out) pada tanggal ini
-        $transfersOutCount = PatientTransfer::where('from_room_id', $room->id)
-            ->where('status', 'accepted')
-            ->where(function ($q) use ($start, $end) {
-                $q->whereBetween('accepted_at', [$start, $end])
-                  ->orWhereBetween('transfer_date', [$start, $end]);
-            })
-            ->count();
 
-        // 5. Pasien Keluar Hidup (KRS) pada tanggal ini
-        $dischargesCount = Admission::where('current_room_id', $room->id)
-            ->where('status', 'discharged')
-            ->whereBetween('discharge_date', [$start, $end])
-            ->whereNotIn('discharge_condition', ['deceased_under_48h', 'deceased_over_48h', 'deceased'])
-            ->count();
+    /*
+    |--------------------------------------------------------------------------
+    | 3. PASIEN PINDAHAN MASUK / TRANSFER IN
+    |--------------------------------------------------------------------------
+    | Pasien yang berasal dari ruangan lain dan diterima di ruangan ini.
+    |
+    */
+    $transfersInCount = PatientTransfer::where('to_room_id', $room->id)
+    ->where('status', 'accepted')
+    ->whereBetween('transfer_date', [$start, $end])
+    ->count();
 
-        // 6. Pasien Meninggal < 48 Jam pada tanggal ini
-        $deathsUnder48h = Admission::where('current_room_id', $room->id)
-            ->where('status', 'deceased')
-            ->where('discharge_condition', 'deceased_under_48h')
-            ->whereBetween('discharge_date', [$start, $end])
-            ->count();
+    /*
+    |--------------------------------------------------------------------------
+    | 4. PASIEN PINDAHAN KELUAR / TRANSFER OUT
+    |--------------------------------------------------------------------------
+    | Pasien yang dipindahkan dari ruangan ini ke ruangan lain.
+    |
+    */
+    $transfersOutCount = PatientTransfer::where('from_room_id', $room->id)
+    ->where('status', 'accepted')
+    ->whereBetween('transfer_date', [$start, $end])
+    ->count();
 
-        // 7. Pasien Meninggal >= 48 Jam pada tanggal ini
-        $deathsOver48h = Admission::where('current_room_id', $room->id)
-            ->where('status', 'deceased')
-            ->where('discharge_condition', 'deceased_over_48h')
-            ->whereBetween('discharge_date', [$start, $end])
-            ->count();
 
-        // 8. Pasien Sisa (Akhir Hari)
-        $remainingPatients = $initialPatients + $admissionsCount + $transfersInCount - $transfersOutCount - $dischargesCount - $deathsUnder48h - $deathsOver48h;
-        $remainingPatients = max(0, $remainingPatients);
+    /*
+    |--------------------------------------------------------------------------
+    | 5. PASIEN KRS / KELUAR HIDUP
+    |--------------------------------------------------------------------------
+    | Mutasi TIDAK masuk ke sini.
+    |
+    */
+    $dischargesCount = Admission::where('current_room_id', $room->id)
+        ->where('status', 'discharged')
+        ->whereBetween('discharge_date', [$start, $end])
+        ->whereNotIn('discharge_condition', [
+            'deceased_under_48h',
+            'deceased_over_48h',
+            'deceased'
+        ])
+        ->count();
 
-        // 9. Pasien Masuk & Keluar Hari Yang Sama (ODC) pada tanggal ini
-        $sameDayDischargesCount = Admission::where('current_room_id', $room->id)
-            ->whereIn('status', ['discharged', 'deceased'])
-            ->whereBetween('admission_date', [$start, $end])
-            ->whereBetween('discharge_date', [$start, $end])
-            ->count();
 
-        // Hari Perawatan (HP) = Pasien Sisa + ODC
-        $careDays = $remainingPatients + $sameDayDischargesCount;
+    /*
+    |--------------------------------------------------------------------------
+    | 6. MENINGGAL < 48 JAM
+    |--------------------------------------------------------------------------
+    */
+    $deathsUnder48h = Admission::where('current_room_id', $room->id)
+        ->where('status', 'deceased')
+        ->where('discharge_condition', 'deceased_under_48h')
+        ->whereBetween('discharge_date', [$start, $end])
+        ->count();
 
-        // 10. Total Lama Dirawat (LD) Pasien Keluar/Meninggal pada tanggal ini
-        $totalLengthOfStay = (int) Admission::where('current_room_id', $room->id)
-            ->whereIn('status', ['discharged', 'deceased'])
-            ->whereBetween('discharge_date', [$start, $end])
-            ->sum('length_of_stay');
 
-        return DailyCensus::updateOrCreate(
-            ['room_id' => $room->id, 'census_date' => $date],
-            [
-                'initial_patients' => max(0, $initialPatients),
-                'admissions_count' => $admissionsCount,
-                'transfers_in_count' => $transfersInCount,
-                'transfers_out_count' => $transfersOutCount,
-                'discharges_count' => $dischargesCount,
-                'deaths_under_48h' => $deathsUnder48h,
-                'deaths_over_48h' => $deathsOver48h,
-                'remaining_patients' => $remainingPatients,
-                'care_days' => max(0, $careDays),
-                'total_length_of_stay' => $totalLengthOfStay,
-            ]
-        );
-    }
+    /*
+    |--------------------------------------------------------------------------
+    | 7. MENINGGAL >= 48 JAM
+    |--------------------------------------------------------------------------
+    */
+    $deathsOver48h = Admission::where('current_room_id', $room->id)
+        ->where('status', 'deceased')
+        ->where('discharge_condition', 'deceased_over_48h')
+        ->whereBetween('discharge_date', [$start, $end])
+        ->count();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 8. PASIEN SISA / AKHIR HARI
+    |--------------------------------------------------------------------------
+    |
+    | Rumus:
+    |
+    | Pasien Awal
+    | + Pasien MRS
+    | + Transfer In
+    | - Transfer Out
+    | - KRS
+    | - Meninggal
+    |
+    */
+    $remainingPatients =
+        $initialPatients
+        + $admissionsCount
+        + $transfersInCount
+        - $transfersOutCount
+        - $dischargesCount
+        - $deathsUnder48h
+        - $deathsOver48h;
+
+    $remainingPatients = max(0, $remainingPatients);
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 9. ONE DAY CARE
+    |--------------------------------------------------------------------------
+    */
+    $sameDayDischargesCount = Admission::where('current_room_id', $room->id)
+        ->whereIn('status', ['discharged', 'deceased'])
+        ->whereBetween('admission_date', [$start, $end])
+        ->whereBetween('discharge_date', [$start, $end])
+        ->count();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 10. HARI PERAWATAN
+    |--------------------------------------------------------------------------
+    */
+    $careDays = $remainingPatients + $sameDayDischargesCount;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 11. TOTAL LAMA DIRAWAT
+    |--------------------------------------------------------------------------
+    |
+    | Hanya pasien yang benar-benar KRS / meninggal.
+    | Mutasi tidak dianggap pasien keluar rumah sakit.
+    |
+    */
+    $totalLengthOfStay = (int) Admission::where('current_room_id', $room->id)
+        ->whereIn('status', ['discharged', 'deceased'])
+        ->whereBetween('discharge_date', [$start, $end])
+        ->sum('length_of_stay');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | SIMPAN DATA SENSUS
+    |--------------------------------------------------------------------------
+    */
+    return DailyCensus::updateOrCreate(
+        [
+            'room_id' => $room->id,
+            'census_date' => $date
+        ],
+        [
+            'initial_patients' => max(0, $initialPatients),
+
+            // Pasien benar-benar MRS
+            'admissions_count' => $admissionsCount,
+
+            // Pasien pindahan masuk
+            'transfers_in_count' => $transfersInCount,
+
+            // Pasien pindahan keluar
+            'transfers_out_count' => $transfersOutCount,
+
+            // Pasien KRS
+            'discharges_count' => $dischargesCount,
+
+            // Meninggal
+            'deaths_under_48h' => $deathsUnder48h,
+            'deaths_over_48h' => $deathsOver48h,
+
+            // Pasien sisa
+            'remaining_patients' => $remainingPatients,
+
+            // Hari perawatan
+            'care_days' => max(0, $careDays),
+
+            // Lama dirawat
+            'total_length_of_stay' => $totalLengthOfStay,
+        ]
+    );
+}
+
 
     /**
-     * Hitung Indikator Rawat Inap Rumah Sakit untuk periode/ruangan tertentu
+     * Hitung indikator Rawat Inap Rumah Sakit
+     * berdasarkan periode / ruangan tertentu.
      */
-    public static function calculateIndicators(Room $room, int $year, int $month): array
-    {
+    public static function calculateIndicators(
+        Room $room,
+        int $year,
+        int $month
+    ): array {
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+
         $daysInMonth = $startDate->daysInMonth;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ambil sensus harian bulan tersebut
+        |--------------------------------------------------------------------------
+        */
 
         $censuses = DailyCensus::where('room_id', $room->id)
             ->whereYear('census_date', $year)
             ->whereMonth('census_date', $month)
             ->get();
 
-        $totalCareDays = $censuses->sum('care_days'); // Total Hari Perawatan (HP)
-        $totalLengthOfStay = $censuses->sum('total_length_of_stay'); // Total Lama Dirawat (LD)
+
+        /*
+        |--------------------------------------------------------------------------
+        | Total Hari Perawatan
+        |--------------------------------------------------------------------------
+        */
+
+        $totalCareDays = $censuses->sum('care_days');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Total Lama Dirawat
+        |--------------------------------------------------------------------------
+        */
+
+        $totalLengthOfStay = $censuses->sum('total_length_of_stay');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Total KRS
+        |--------------------------------------------------------------------------
+        */
+
         $totalDischarges = $censuses->sum('discharges_count');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Total Meninggal < 48 Jam
+        |--------------------------------------------------------------------------
+        */
+
         $totalDeathsUnder48h = $censuses->sum('deaths_under_48h');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Total Meninggal >= 48 Jam
+        |--------------------------------------------------------------------------
+        */
+
         $totalDeathsOver48h = $censuses->sum('deaths_over_48h');
-        $totalDeaths = $totalDeathsUnder48h + $totalDeathsOver48h;
-        $totalOut = $totalDischarges + $totalDeaths;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Total Meninggal
+        |--------------------------------------------------------------------------
+        */
+
+        $totalDeaths =
+            $totalDeathsUnder48h +
+            $totalDeathsOver48h;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Total Pasien Keluar
+        |--------------------------------------------------------------------------
+        */
+
+        $totalOut =
+            $totalDischarges +
+            $totalDeaths;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Kapasitas Tempat Tidur
+        |--------------------------------------------------------------------------
+        */
 
         $capacity = $room->capacity;
 
-        // Formula Perhitungan Indikator RS
-        // 1. BOR = (Total HP / (Jumlah TT * Jumlah Hari)) * 100%
-        $bor = ($capacity > 0 && $daysInMonth > 0) 
-            ? round(($totalCareDays / ($capacity * $daysInMonth)) * 100, 2) 
-            : 0;
-
-        // 2. ALOS = Total LD Pasien Keluar / Total Pasien Keluar (Hidup + Meninggal)
-        $alos = ($totalOut > 0) ? round($totalLengthOfStay / $totalOut, 2) : 0;
-
-        // 3. TOI = ((Jumlah TT * Jumlah Hari) - Total HP) / Total Pasien Keluar
-        $toi = ($totalOut > 0 && $capacity > 0) 
-            ? round((($capacity * $daysInMonth) - $totalCareDays) / $totalOut, 2) 
-            : 0;
-
-        // 4. BTO = Total Pasien Keluar / Jumlah TT
-        $bto = ($capacity > 0) ? round($totalOut / $capacity, 2) : 0;
-
-        // 5. NDR (Net Death Rate per 1000) = (Meninggal > 48 jam / Pasien Keluar) * 1000
-        $ndr = ($totalOut > 0) ? round(($totalDeathsOver48h / $totalOut) * 1000, 2) : 0;
-
-        // 6. GDR (Gross Death Rate per 1000) = (Total Meninggal / Pasien Keluar) * 1000
-        $gdr = ($totalOut > 0) ? round(($totalDeaths / $totalOut) * 1000, 2) : 0;
 
         return [
-            'room' => $room,
-            'period' => $startDate->translatedFormat('F Y'),
-            'days_in_month' => $daysInMonth,
             'total_care_days' => $totalCareDays,
+
             'total_length_of_stay' => $totalLengthOfStay,
+
             'total_discharges' => $totalDischarges,
+
+            'total_deaths_under_48h' => $totalDeathsUnder48h,
+
+            'total_deaths_over_48h' => $totalDeathsOver48h,
+
             'total_deaths' => $totalDeaths,
+
             'total_out' => $totalOut,
-            'bor' => $bor,
-            'alos' => $alos,
-            'toi' => $toi,
-            'bto' => $bto,
-            'ndr' => $ndr,
-            'gdr' => $gdr,
+
+            'capacity' => $capacity,
+
+            'days_in_month' => $daysInMonth,
         ];
     }
 }
-

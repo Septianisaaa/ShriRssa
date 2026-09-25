@@ -6,6 +6,7 @@ use App\Models\Room;
 use App\Models\Patient;
 use App\Models\Admission;
 use App\Models\DailyCensus;
+use App\Models\PatientTransfer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,45 +14,291 @@ use Illuminate\Support\Facades\DB;
 class SensusController extends Controller
 {
     public function index(Request $request)
-    {
-        $user = auth()->user();
-        $allRooms = Room::where('is_active', true)->get();
+{
+    $user = auth()->user();
 
-        if ($user && $user->isAdminRuang() && $user->room_id) {
-            $selectedRoomId = $user->room_id;
-            $rooms = Room::where('id', $user->room_id)->get();
-        } else {
-            $defaultRoomId = Room::first()?->id;
-            $selectedRoomId = $request->get('room_id', $defaultRoomId);
-            $rooms = $allRooms;
-        }
+    $allRooms = Room::where('is_active', true)->get();
 
-        $selectedDate = $request->get('date', Carbon::today()->toDateString());
+    if ($user && $user->isAdminRuang() && $user->room_id) {
+        $selectedRoomId = $user->room_id;
 
-        if (!$selectedRoomId || !Room::where('id', $selectedRoomId)->exists()) {
-            $rolePrefix = ($user && $user->isSuperAdmin()) ? 'shri.' : 'admin_ruang.';
-            return redirect()->route($rolePrefix . 'dashboard')
-                ->withErrors(['room' => 'Data ruangan belum tersedia. Silakan jalankan seeder database terlebih dahulu (php artisan db:seed).']);
-        }
+        $rooms = Room::where('id', $user->room_id)->get();
+    } else {
+        $defaultRoomId = Room::first()?->id;
 
-        $room = Room::find($selectedRoomId);
+        $selectedRoomId = $request->get('room_id', $defaultRoomId);
 
-        // Real-Time auto sync sensus harian untuk tanggal pilihan
-        \App\Services\CensusCalculatorService::syncRoomDate($room, $selectedDate);
-
-        // Data sensus harian pada tanggal pilihan
-        $census = DailyCensus::where('room_id', $room->id)
-            ->where('census_date', $selectedDate)
-            ->first();
-
-        // Pasien aktif di ruangan ini saat ini
-        $activeAdmissions = Admission::where('current_room_id', $room->id)
-            ->where('status', 'active')
-            ->with('patient')
-            ->get();
-
-        return view('sensus.index', compact('room', 'rooms', 'allRooms', 'selectedDate', 'census', 'activeAdmissions'));
+        $rooms = $allRooms->unique('name');
     }
+
+    $selectedDate = $request->get(
+        'date',
+        Carbon::today()->toDateString()
+    );
+
+    if (
+        !$selectedRoomId ||
+        !Room::where('id', $selectedRoomId)->exists()
+    ) {
+        $rolePrefix = ($user && $user->isSuperAdmin())
+            ? 'shri.'
+            : 'admin_ruang.';
+
+        return redirect()
+            ->route($rolePrefix . 'dashboard')
+            ->withErrors([
+                'room' => 'Data ruangan belum tersedia.'
+            ]);
+    }
+
+    $room = Room::findOrFail($selectedRoomId);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sinkronisasi sensus
+    |--------------------------------------------------------------------------
+    */
+
+    \App\Services\CensusCalculatorService::syncRoomDate(
+        $room,
+        $selectedDate
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Data Sensus Harian
+    |--------------------------------------------------------------------------
+    */
+
+    $census = DailyCensus::where('room_id', $room->id)
+        ->where('census_date', $selectedDate)
+        ->first();
+
+    /*
+    |--------------------------------------------------------------------------
+    | PASIEN AKTIF
+    |--------------------------------------------------------------------------
+    */
+
+    $activeAdmissions = Admission::where(
+            'current_room_id',
+            $room->id
+        )
+        ->where('status', 'active')
+        ->with('patient')
+        ->get();
+
+    /*
+    |--------------------------------------------------------------------------
+    | PASIEN OUT / KRS
+    |
+    | HANYA:
+    | - discharged
+    | - deceased
+    |
+    | MUTASI TIDAK MASUK KE SINI
+    |--------------------------------------------------------------------------
+    */
+
+    $outAdmissions = Admission::where(
+            'current_room_id',
+            $room->id
+        )
+        ->whereIn('status', [
+            'discharged',
+            'deceased'
+        ])
+        ->whereNotNull('discharge_date')
+        ->whereDate('discharge_date', $selectedDate)
+        ->with('patient')
+        ->orderBy('discharge_date', 'desc')
+        ->get();
+
+    /*
+    |--------------------------------------------------------------------------
+    | PASIEN SISA
+    |
+    | Pasien yang sudah dirawat SEBELUM tanggal sensus
+    | dan masih aktif pada tanggal tersebut.
+    |
+    | Untuk sementara kita ambil pasien aktif yang MRS
+    | sebelum tanggal sensus.
+    |--------------------------------------------------------------------------
+    */
+
+    $sisaAdmissions = Admission::where(
+            'current_room_id',
+            $room->id
+        )
+        ->where('status', 'active')
+        ->whereDate(
+            'admission_date',
+            '<',
+            $selectedDate
+        )
+        ->with('patient')
+        ->orderBy('admission_date')
+        ->get();
+
+        // =====================================================
+    // REKAP PASIEN UNTUK TANGGAL SENSUS
+    // =====================================================
+
+    // Pasien sisa = pasien yang sudah dirawat sebelum tanggal sensus
+    // dan masih aktif pada awal tanggal sensus
+    $sensusDate = Carbon::parse($selectedDate)->startOfDay();
+
+    $pasienSisa = Admission::where('current_room_id', $room->id)
+        ->where('admission_date', '<', $sensusDate)
+        ->where(function ($query) use ($sensusDate) {
+            $query->whereNull('discharge_date')
+                ->orWhere('discharge_date', '>=', $sensusDate);
+        })
+        ->count();
+
+    // Pasien masuk pada tanggal sensus
+    $pasienMasuk = Admission::where('current_room_id', $room->id)
+        ->whereDate('admission_date', $selectedDate)
+        ->count();
+
+    // Pasien KRS / meninggal pada tanggal sensus
+    $pasienOut = Admission::where('current_room_id', $room->id)
+        ->whereIn('status', ['discharged', 'deceased'])
+        ->whereDate('discharge_date', $selectedDate)
+        ->count();
+
+    // Total pasien akhir
+    $totalPasien = $pasienSisa + $pasienMasuk - $pasienOut;
+
+        // =====================================================
+    // REKAP PASIEN SENSUS
+    // =====================================================
+
+    // Pasien sisa dari hari sebelumnya
+    $pasienSisa = Admission::where('current_room_id', $room->id)
+        ->where('admission_date', '<', $sensusDate)
+        ->where(function ($query) use ($sensusDate) {
+            $query->whereNull('discharge_date')
+                ->orWhere('discharge_date', '>=', $sensusDate);
+        })
+        ->count();
+
+    // Pasien masuk pada tanggal sensus
+    $pasienMasuk = Admission::where('current_room_id', $room->id)
+        ->whereDate('admission_date', $selectedDate)
+        ->count();
+
+    // Pasien OB
+    // Untuk sementara dihitung dari pasien yang MRS dan KRS pada hari yang sama
+    $pasienOb = Admission::where('current_room_id', $room->id)
+        ->where('admission_type', 'new')
+        ->whereDate('admission_date', $selectedDate)
+        ->count();
+
+    // Pasien pindahan / Transfer In pada tanggal sensus
+    $pasienPindahan = \App\Models\PatientTransfer::where('to_room_id', $room->id)
+    ->where('status', 'accepted')
+    ->whereDate('transfer_date', $selectedDate)
+    ->count();
+
+    // Pasien KRS / meninggal pada tanggal sensus
+    // Mutasi TIDAK dihitung sebagai pasien out.
+    $pasienOut = Admission::where('current_room_id', $room->id)
+        ->whereIn('status', ['discharged', 'deceased'])
+        ->whereDate('discharge_date', $selectedDate)
+        ->count();
+
+    // Pasien Dipindahkan Keluar
+    $transfersOut = \App\Models\PatientTransfer::where('from_room_id', $room->id)
+    ->where('status', 'accepted')
+    ->whereDate('transfer_date', $selectedDate)
+    ->count();
+
+    // Total pasien akhir
+    $totalPasien = $pasienSisa + $pasienMasuk - $pasienOut;
+
+        // =====================================================
+    // PASIEN KRS PADA TANGGAL SENSUS
+    // =====================================================
+
+    $krsAdmissions = Admission::where('current_room_id', $room->id)
+        ->where('status', 'discharged')
+        ->whereDate('discharge_date', $selectedDate)
+        ->with('patient')
+        ->get();
+
+
+    // =====================================================
+    // PASIEN MENINGGAL PADA TANGGAL SENSUS
+    // =====================================================
+
+    $deceasedAdmissions = Admission::where('current_room_id', $room->id)
+        ->where('status', 'deceased')
+        ->whereDate('discharge_date', $selectedDate)
+        ->with('patient')
+        ->get();
+        
+    $transferInAdmissions = PatientTransfer::with('admission.patient')
+    ->where('to_room_id', $room->id)
+    ->where('status', 'accepted')
+    ->whereDate('transfer_date', $selectedDate)
+    ->get();
+    $pasienPindahan = $transferInAdmissions->count();
+    // Data rekap untuk Blade
+    $rekap = [
+    // Pasien yang dibawa dari hari sebelumnya
+    'pasien_sisa' => $pasienSisa,
+
+    // Pasien MRS baru
+    'pasien_masuk' => $pasienMasuk,
+
+    // One Day Care
+    'pasien_ob' => $pasienOb,
+
+    // Pasien masuk karena mutasi dari ruangan lain
+    'pasien_pindahan' => $pasienPindahan,
+
+    // Total pasien masuk hari ini
+    'total_pasien_masuk' =>
+        $pasienOb + $pasienPindahan,
+
+    // Total pasien yang dirawat pada hari tersebut
+    'total_pasien_dirawat' =>
+        $pasienSisa + $pasienOb + $pasienPindahan,
+
+    // Pasien KRS
+    'pasien_krs' => $krsAdmissions->count(),
+
+    // Pasien dipindahkan ke ruangan lain
+'pasien_dipindahkan' => $transfersOut,
+
+    // Pasien meninggal
+    'pasien_meninggal' => $deceasedAdmissions->count(),
+
+    // Total pasien keluar
+    'total_pasien_out' =>
+        $krsAdmissions->count() + $deceasedAdmissions->count(),
+
+    // Sisa pasien untuk hari berikutnya
+    'pasien_sisa_akhir' =>
+        $pasienSisa
+        + $pasienOb
+        + $pasienPindahan
+        - $krsAdmissions->count()
+        - $deceasedAdmissions->count(),
+];
+
+    return view('sensus.index', compact(
+    'room',
+    'rooms',
+    'allRooms',
+    'selectedDate',
+    'census',
+    'activeAdmissions',
+    'outAdmissions',
+    'rekap'
+));
+}
 
     public function storePatient(Request $request)
     {
@@ -87,6 +334,7 @@ class SensusController extends Controller
                 'initial_room_id' => $validated['room_id'],
                 'room_class' => $validated['room_class'] ?? $selectedRoom?->room_class,
                 'admission_date' => $validated['admission_date'],
+                'admission_type' => 'new',
                 'status' => 'active',
                 'diagnosis' => $validated['diagnosis'] ?? null,
             ]);

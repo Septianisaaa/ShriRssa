@@ -51,8 +51,8 @@ class RoomSeeder extends Seeder
             ['name' => 'Bromo', 'code' => 'IRNA2-BRM-K3', 'category' => 'IRNA 2', 'room_class' => 'Kelas 3', 'capacity' => 42],
 
             // D. INSTALASI RAWAT INAP 3 (IRNA 3)
-            ['name' => 'Toba Ibu (Kelas 1)', 'code' => 'IRNA3-TOB-IBU-K1', 'category' => 'IRNA 3', 'room_class' => 'Kelas 1', 'capacity' => 10],
-            ['name' => 'Toba Ibu (Kelas 2)', 'code' => 'IRNA3-TOB-IBU-K2', 'category' => 'IRNA 3', 'room_class' => 'Kelas 2', 'capacity' => 8],
+            ['name' => 'Toba Ibu', 'code' => 'IRNA3-TOB-IBU-K1', 'category' => 'IRNA 3', 'room_class' => 'Kelas 1', 'capacity' => 10],
+            ['name' => 'Toba Ibu', 'code' => 'IRNA3-TOB-IBU-K2', 'category' => 'IRNA 3', 'room_class' => 'Kelas 2', 'capacity' => 8],
             ['name' => 'Toba Ibu (Kelas 3)', 'code' => 'IRNA3-TOB-IBU-K3', 'category' => 'IRNA 3', 'room_class' => 'Kelas 3', 'capacity' => 0],
             ['name' => 'Toba Bayi (Kelas 1)', 'code' => 'IRNA3-TOB-BYI-K1', 'category' => 'IRNA 3', 'room_class' => 'Kelas 1', 'capacity' => 1],
             ['name' => 'Toba Bayi (Kelas 2)', 'code' => 'IRNA3-TOB-BYI-K2', 'category' => 'IRNA 3', 'room_class' => 'Kelas 2', 'capacity' => 1],

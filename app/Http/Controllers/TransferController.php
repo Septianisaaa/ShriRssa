@@ -47,7 +47,7 @@ class TransferController extends Controller
         $user = Auth::user();
         $validated = $request->validate([
             'admission_id' => 'required|exists:admissions,id',
-            'to_room_id' => 'required|exists:rooms,id',
+            'to_room_id' => 'required|exists:rooms,id', 
             'transfer_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
@@ -92,6 +92,8 @@ class TransferController extends Controller
             $toRoom = $transfer->toRoom;
 
             $admission->current_room_id = $transfer->to_room_id;
+            $admission->admission_type = 'transfer';
+            $admission->status = 'active';
             $admission->save();
 
             // Sync sensus harian secara real-time untuk ruangan asal dan ruangan tujuan

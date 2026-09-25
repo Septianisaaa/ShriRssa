@@ -35,23 +35,74 @@
                             <td>{{ $tf->transfer_date->format('d/m/Y H:i') }}</td>
                             <td><strong>{{ $tf->admission->patient->rm_number }}</strong></td>
                             <td><strong>{{ $tf->admission->patient->name }}</strong></td>
-                            <td><span class="badge badge-info">{{ $tf->fromRoom->name }}</span></td>
-                            <td><span class="badge badge-warning">{{ $tf->toRoom->name }}</span></td>
+                            <td>
+                                <span class="badge badge-info">
+                                    {{ $tf->fromRoom->name }} ({{ $tf->fromRoom->category }})
+                                </span>
+                                <br>
+                                <small style="color: #64748b;">
+                                    {{ $tf->fromRoom->room_class ?? '-' }}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge badge-warning">
+                                    {{ $tf->toRoom->name }} ({{ $tf->toRoom->category }})
+                                </span>
+                                <br>
+                                <small style="color: #64748b;">
+                                    {{ $tf->toRoom->room_class ?? '-' }}
+                                </small>
+                            </td>
                             <td>{{ $tf->notes ?? '-' }}</td>
-                            <td style="display: flex; gap: 0.4rem;">
-                                <form action="{{ route($rolePrefix . 'transfers.accept', $tf->id) }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="btn btn-success" style="padding: 0.3rem 0.75rem; font-size: 0.775rem;">
-                                        Terima Pasien
-                                    </button>
-                                </form>
+                            <td>
+                                @php
+                                    $user = Auth::user();
 
-                                <form action="{{ route($rolePrefix . 'transfers.reject', $tf->id) }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.775rem; color: #991b1b; border-color: #fecaca; background: #fef2f2;">
-                                        Tolak
-                                    </button>
-                                </form>
+                                    $isSuper = $user->isSuperAdmin();
+
+                                    $isToRoom = $user->isAdminRuang()
+                                        && $user->room_id == $tf->to_room_id;
+
+                                    $isFromRoom = $user->isAdminRuang()
+                                        && $user->room_id == $tf->from_room_id;
+                                @endphp
+
+                                @if($isSuper || $isToRoom)
+
+                                    <div style="display: flex; gap: 0.4rem;">
+                                        <form action="{{ route($rolePrefix . 'transfers.accept', $tf->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="btn btn-success"
+                                                    style="padding: 0.3rem 0.75rem; font-size: 0.775rem;">
+                                                Terima Pasien
+                                            </button>
+                                        </form>
+
+                                        <form action="{{ route($rolePrefix . 'transfers.reject', $tf->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="btn btn-secondary"
+                                                    style="padding: 0.3rem 0.75rem; font-size: 0.775rem; color: #991b1b; border-color: #fecaca; background: #fef2f2;">
+                                                Tolak
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                @elseif($isFromRoom)
+
+                                    <span class="badge badge-warning">
+                                        Menunggu Konfirmasi Ruangan Tujuan
+                                    </span>
+
+                                @else
+
+                                    <span style="color: var(--text-muted);">
+                                        Menunggu Konfirmasi
+                                    </span>
+
+                                @endif
+                            </td>
                             </td>
                         </tr>
                     @empty
@@ -89,8 +140,21 @@
                             <td>{{ $ht->transfer_date->format('d/m/Y H:i') }}</td>
                             <td>{{ $ht->admission->patient->rm_number }}</td>
                             <td>{{ $ht->admission->patient->name }}</td>
-                            <td>{{ $ht->fromRoom->name }}</td>
-                            <td>{{ $ht->toRoom->name }}</td>
+                            <td>
+                                {{ $ht->fromRoom->name }} ({{ $ht->fromRoom->category }})
+                                <br>
+                                <small style="color: #64748b;">
+                                    {{ $ht->fromRoom->room_class ?? '-' }}
+                                </small>
+                            </td>
+
+                            <td>
+                                {{ $ht->toRoom->name }} ({{ $ht->toRoom->category }})
+                                <br>
+                                <small style="color: #64748b;">
+                                    {{ $ht->toRoom->room_class ?? '-' }}
+                                </small>
+                            </td>
                             <td>
                                 @if($ht->status === 'accepted')
                                     <span class="badge badge-success">Diterima</span>

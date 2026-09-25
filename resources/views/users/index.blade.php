@@ -31,13 +31,21 @@
 
                 <div class="form-group">
                     <label class="form-label">Pilih Ruangan Penugasan:</label>
+
                     <select name="room_id" class="form-select" required>
                         <option value="">-- Pilih Ruangan --</option>
-                        @foreach($rooms as $r)
-                            <option value="{{ $r->id }}" {{ old('room_id') == $r->id ? 'selected' : '' }}>
-                                {{ $r->name }} ({{ $r->category }})
+
+                        @foreach($rooms->groupBy('name') as $roomName => $roomGroup)
+                            @php
+                                $r = $roomGroup->first();
+                            @endphp
+
+                            <option value="{{ $r->id }}"
+                                {{ old('room_id') == $r->id ? 'selected' : '' }}>
+                                {{ $roomName }} ({{ $r->category }})
                             </option>
                         @endforeach
+
                     </select>
                 </div>
 

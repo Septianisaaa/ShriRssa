@@ -213,7 +213,7 @@
    <Row ss:Height="10"/>
    <!-- Row 5: Title Doc -->
    <Row ss:Height="26">
-    <Cell ss:MergeAcross="18" ss:StyleID="sHeaderTitleDoc"><Data ss:Type="String">CATATAN SENSUS HARIAN PENDERITA RAWAT INAP</Data></Cell>
+    <Cell ss:MergeAcross="18" ss:StyleID="sHeaderTitleDoc"><Data ss:Type="String">SENSUS HARIAN PENDERITA RAWAT INAP</Data></Cell>
    </Row>
    <!-- Row 6: Subtitle Doc -->
    <Row ss:Height="22">
@@ -321,11 +321,11 @@
                $totalLosDischarged += $los;
 
                $conditionLabel = match($adm->discharge_condition) {
-                   'cured' => 'Membaik',
-                   'improved' => 'Membaik',
-                   'unimproved' => 'Belum Sembuh',
-                   'referred' => 'Dirujuk',
-                   'aps' => 'APS',
+                   'cured' => 'Dipulangkan',
+                   'improved' => 'Pulang Paksa',
+                   'unimproved' => 'Lari',
+                   'referred' => 'Dirujuk ke RS Lain',
+                   'transfer' => 'Dipindahkan',
                    'deceased_under_48h' => 'Meninggal < 48 Jam',
                    'deceased_over_48h' => 'Meninggal >= 48 Jam',
                    'deceased' => 'Meninggal',

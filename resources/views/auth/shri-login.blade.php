@@ -219,12 +219,6 @@
             </button>
         </form>
 
-        <div class="credential-box">
-            <strong>Demo Credential Petugas SHRI:</strong><br>
-            Username / Email: <code>shri</code> / <code>shri@rssa.go.id</code><br>
-            Password: <code>password</code>
-        </div>
-
         <div class="auth-footer">
             Belum memiliki akun Petugas SHRI? <a href="{{ route('shri.register') }}">Daftar Baru</a><br>
             <span style="font-size: 0.75rem; color: #94a3b8; display: block; margin-top: 0.5rem;">
