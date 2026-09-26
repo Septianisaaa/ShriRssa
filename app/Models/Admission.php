@@ -14,6 +14,7 @@ class Admission extends Model
         'current_room_id',
         'initial_room_id',
         'room_class',
+        'payment_method',
         'admission_date',
         'admission_type',
         'status',

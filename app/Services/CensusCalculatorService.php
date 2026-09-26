@@ -100,6 +100,29 @@ class CensusCalculatorService
         ])
         ->count();
 
+    $dischargesCuredCount = Admission::where('current_room_id', $room->id)
+        ->where('status', 'discharged')
+        ->whereBetween('discharge_date', [$start, $end])
+        ->whereIn('discharge_condition', ['cured', 'improved', 'sembuh'])
+        ->count();
+
+    $dischargesApsCount = Admission::where('current_room_id', $room->id)
+        ->where('status', 'discharged')
+        ->whereBetween('discharge_date', [$start, $end])
+        ->whereIn('discharge_condition', ['aps', 'pulang_paksa'])
+        ->count();
+
+    $dischargesRunCount = Admission::where('current_room_id', $room->id)
+        ->where('status', 'discharged')
+        ->whereBetween('discharge_date', [$start, $end])
+        ->whereIn('discharge_condition', ['run', 'lari'])
+        ->count();
+
+    $dischargesReferredCount = Admission::where('current_room_id', $room->id)
+        ->where('status', 'discharged')
+        ->whereBetween('discharge_date', [$start, $end])
+        ->whereIn('discharge_condition', ['referred', 'dirujuk'])
+        ->count();
 
     /*
     |--------------------------------------------------------------------------
@@ -111,7 +134,6 @@ class CensusCalculatorService
         ->where('discharge_condition', 'deceased_under_48h')
         ->whereBetween('discharge_date', [$start, $end])
         ->count();
-
 
     /*
     |--------------------------------------------------------------------------
@@ -211,6 +233,10 @@ class CensusCalculatorService
 
             // Pasien KRS
             'discharges_count' => $dischargesCount,
+            'discharges_cured_count' => $dischargesCuredCount,
+            'discharges_aps_count' => $dischargesApsCount,
+            'discharges_run_count' => $dischargesRunCount,
+            'discharges_referred_count' => $dischargesReferredCount,
 
             // Meninggal
             'deaths_under_48h' => $deathsUnder48h,
@@ -347,6 +373,369 @@ class CensusCalculatorService
 
             'capacity' => $capacity,
 
+            'days_in_month' => $daysInMonth,
+        ];
+    }
+
+    /**
+     * Hitung Rekap Sensus Harian per Kelas Perawatan (Tabel 1 PDF).
+     */
+    public static function getDailySummaryByClass(string $date, ?Room $selectedRoom = null): array
+    {
+        $start = Carbon::parse($date)->startOfDay();
+        $end = Carbon::parse($date)->endOfDay();
+
+        $standardClasses = ['VVIP', 'VIP', 'Kelas 1', 'Kelas 2', 'Kelas 3', 'Non Kelas / Khusus'];
+        
+        $queryRooms = Room::where('is_active', true);
+        if ($selectedRoom) {
+            $queryRooms->where('id', $selectedRoom->id);
+        }
+        $rooms = $queryRooms->get();
+
+        $existingClasses = $rooms->pluck('room_class')->filter()->unique()->values()->toArray();
+        $classes = array_values(array_unique(array_merge($standardClasses, $existingClasses)));
+
+        $result = [];
+
+        foreach ($classes as $cls) {
+            $classRooms = $rooms->filter(fn($r) => ($r->room_class ?? 'Non Kelas / Khusus') === $cls || ($cls === 'Non Kelas / Khusus' && empty($r->room_class)));
+            $roomIds = $classRooms->pluck('id')->toArray();
+            $capacity = $classRooms->sum('capacity');
+
+            if (empty($roomIds) && $selectedRoom && ($selectedRoom->room_class ?? 'Non Kelas / Khusus') === $cls) {
+                $roomIds = [$selectedRoom->id];
+                $capacity = $selectedRoom->capacity;
+            }
+
+            if (empty($roomIds)) {
+                $result[$cls] = [
+                    'class_name' => $cls,
+                    'penderita_awal' => 0,
+                    'ob' => 0,
+                    'dari' => 0,
+                    'keluar_dp' => 0,
+                    'keluar_pp' => 0,
+                    'keluar_lari' => 0,
+                    'keluar_rj' => 0,
+                    'ke_ruang_lain' => 0,
+                    'jumlah_keluar_hidup' => 0,
+                    'mati_under_48' => 0,
+                    'mati_over_48' => 0,
+                    'jumlah_mati' => 0,
+                    'total_keluar' => 0,
+                    'sisa_pasien' => 0,
+                    'pulang_hari_sama' => 0,
+                    'hari_perawatan' => 0,
+                    'ld' => 0,
+                    'jml_tt' => $capacity,
+                ];
+                continue;
+            }
+
+            // Penderita Awal (sisa kemarin)
+            $penderitaAwal = Admission::whereIn('current_room_id', $roomIds)
+                ->where('admission_date', '<', $start)
+                ->where(function ($q) use ($start) {
+                    $q->whereNull('discharge_date')
+                        ->orWhere('discharge_date', '>=', $start);
+                })
+                ->count();
+
+            // OB (One Day Care)
+            $ob = Admission::whereIn('current_room_id', $roomIds)
+                ->whereIn('status', ['discharged', 'deceased'])
+                ->whereBetween('admission_date', [$start, $end])
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            // Dari (Transfer In)
+            $dari = PatientTransfer::whereIn('to_room_id', $roomIds)
+                ->where('status', 'accepted')
+                ->whereBetween('transfer_date', [$start, $end])
+                ->count();
+
+            // Keluar Hidup
+            $keluarDp = Admission::whereIn('current_room_id', $roomIds)
+                ->where('status', 'discharged')
+                ->where('discharge_condition', 'cured')
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $keluarPp = Admission::whereIn('current_room_id', $roomIds)
+                ->where('status', 'discharged')
+                ->whereIn('discharge_condition', ['improved', 'aps'])
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $keluarLari = Admission::whereIn('current_room_id', $roomIds)
+                ->where('status', 'discharged')
+                ->where('discharge_condition', 'unimproved')
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $keluarRj = Admission::whereIn('current_room_id', $roomIds)
+                ->where('status', 'discharged')
+                ->where('discharge_condition', 'referred')
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $keRuangLain = PatientTransfer::whereIn('from_room_id', $roomIds)
+                ->where('status', 'accepted')
+                ->whereBetween('transfer_date', [$start, $end])
+                ->count();
+
+            $jumlahKeluarHidup = $keluarDp + $keluarPp + $keluarLari + $keluarRj + $keRuangLain;
+
+            // Mati
+            $matiUnder48 = Admission::whereIn('current_room_id', $roomIds)
+                ->where('status', 'deceased')
+                ->where('discharge_condition', 'deceased_under_48h')
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $matiOver48 = Admission::whereIn('current_room_id', $roomIds)
+                ->where('status', 'deceased')
+                ->where('discharge_condition', 'deceased_over_48h')
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $jumlahMati = $matiUnder48 + $matiOver48;
+            $totalKeluar = $jumlahKeluarHidup + $jumlahMati;
+
+            // Pasien Baru MRS pada tanggal tersebut
+            $penderitaBaru = Admission::whereIn('initial_room_id', $roomIds)
+                ->whereBetween('admission_date', [$start, $end])
+                ->count();
+
+            // Pasien Sisa = Penderita Awal + Penderita Baru + Dari - Total Keluar
+            $sisaPasien = max(0, $penderitaAwal + $penderitaBaru + $dari - $totalKeluar);
+
+            // Hari Perawatan (HP = Sisa Pasien + ODC)
+            $hariPerawatan = $sisaPasien + $ob;
+
+            // Lama Dirawat (LD)
+            $ld = (int) Admission::whereIn('current_room_id', $roomIds)
+                ->whereIn('status', ['discharged', 'deceased'])
+                ->whereBetween('discharge_date', [$start, $end])
+                ->sum('length_of_stay');
+
+            $result[$cls] = [
+                'class_name' => $cls,
+                'penderita_awal' => $penderitaAwal,
+                'ob' => $ob,
+                'dari' => $dari,
+                'keluar_dp' => $keluarDp,
+                'keluar_pp' => $keluarPp,
+                'keluar_lari' => $keluarLari,
+                'keluar_rj' => $keluarRj,
+                'ke_ruang_lain' => $keRuangLain,
+                'jumlah_keluar_hidup' => $jumlahKeluarHidup,
+                'mati_under_48' => $matiUnder48,
+                'mati_over_48' => $matiOver48,
+                'jumlah_mati' => $jumlahMati,
+                'total_keluar' => $totalKeluar,
+                'sisa_pasien' => $sisaPasien,
+                'pulang_hari_sama' => $ob,
+                'hari_perawatan' => $hariPerawatan,
+                'ld' => $ld,
+                'jml_tt' => $capacity,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Hitung Rekap Sensus Bulanan Matriks per Tanggal (Tabel 2 PDF).
+     */
+    public static function getMonthlyMatrix(Room $room, int $year, int $month): array
+    {
+        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+        $daysInMonth = $startDate->daysInMonth;
+
+        $matrix = [];
+        $totals = [
+            'penderita_awal' => 0,
+            'penderita_baru' => 0,
+            'penderita_dari' => 0,
+            'keluar_dipulangkan' => 0,
+            'keluar_pulang_paksa' => 0,
+            'keluar_lari' => 0,
+            'keluar_dirujuk' => 0,
+            'mati_under_48' => 0,
+            'mati_over_48' => 0,
+            'ke_ruang_lain' => 0,
+            'sisa_pasien' => 0,
+            'ob' => 0,
+            'hp' => 0,
+            'ld' => 0,
+            'tt' => $room->capacity,
+            'jkn' => 0,
+            'spm' => 0,
+            'jkmm' => 0,
+            'pks' => 0,
+            'umum' => 0,
+        ];
+
+        for ($day = 1; $day <= $daysInMonth; $day++) {
+            $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $day);
+            $start = Carbon::parse($dateStr)->startOfDay();
+            $end = Carbon::parse($dateStr)->endOfDay();
+
+            // Penderita Awal (sisa kemarin)
+            $penderitaAwal = Admission::where('current_room_id', $room->id)
+                ->where('admission_date', '<', $start)
+                ->where(function ($q) use ($start) {
+                    $q->whereNull('discharge_date')
+                        ->orWhere('discharge_date', '>=', $start);
+                })
+                ->count();
+
+            // Penderita Baru
+            $penderitaBaru = Admission::where('initial_room_id', $room->id)
+                ->whereBetween('admission_date', [$start, $end])
+                ->count();
+
+            // Penderita Dari (Transfer In)
+            $penderitaDari = PatientTransfer::where('to_room_id', $room->id)
+                ->where('status', 'accepted')
+                ->whereBetween('transfer_date', [$start, $end])
+                ->count();
+
+            // Keluar Hidup
+            $dipulangkan = Admission::where('current_room_id', $room->id)
+                ->where('status', 'discharged')
+                ->where('discharge_condition', 'cured')
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $pulangPaksa = Admission::where('current_room_id', $room->id)
+                ->where('status', 'discharged')
+                ->whereIn('discharge_condition', ['improved', 'aps'])
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $lari = Admission::where('current_room_id', $room->id)
+                ->where('status', 'discharged')
+                ->where('discharge_condition', 'unimproved')
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $dirujuk = Admission::where('current_room_id', $room->id)
+                ->where('status', 'discharged')
+                ->where('discharge_condition', 'referred')
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            // Mati
+            $matiUnder48 = Admission::where('current_room_id', $room->id)
+                ->where('status', 'deceased')
+                ->where('discharge_condition', 'deceased_under_48h')
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $matiOver48 = Admission::where('current_room_id', $room->id)
+                ->where('status', 'deceased')
+                ->where('discharge_condition', 'deceased_over_48h')
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            // Ke Ruang Lain (Transfer Out)
+            $keRuangLain = PatientTransfer::where('from_room_id', $room->id)
+                ->where('status', 'accepted')
+                ->whereBetween('transfer_date', [$start, $end])
+                ->count();
+
+            // OB (One Day Care)
+            $ob = Admission::where('current_room_id', $room->id)
+                ->whereIn('status', ['discharged', 'deceased'])
+                ->whereBetween('admission_date', [$start, $end])
+                ->whereBetween('discharge_date', [$start, $end])
+                ->count();
+
+            $totalKeluar = $dipulangkan + $pulangPaksa + $lari + $dirujuk + $matiUnder48 + $matiOver48 + $keRuangLain;
+
+            // Sisa Pasien
+            $sisaPasien = max(0, $penderitaAwal + $penderitaBaru + $penderitaDari - $totalKeluar);
+
+            // Hari Perawatan
+            $hp = $sisaPasien + $ob;
+
+            // Lama Dirawat (LD)
+            $ld = (int) Admission::where('current_room_id', $room->id)
+                ->whereIn('status', ['discharged', 'deceased'])
+                ->whereBetween('discharge_date', [$start, $end])
+                ->sum('length_of_stay');
+
+            // Cara Bayar breakdown untuk pasien aktif/MRS pada hari ini
+            $admissionsDay = Admission::where('current_room_id', $room->id)
+                ->where('admission_date', '<=', $end)
+                ->where(function ($q) use ($start) {
+                    $q->whereNull('discharge_date')
+                        ->orWhere('discharge_date', '>=', $start);
+                })
+                ->get();
+
+            $jkn = $admissionsDay->filter(fn($a) => in_array(strtolower($a->payment_method ?? ''), ['jkn', 'bpjs', 'bpjs kesehatan']))->count();
+            $spm = $admissionsDay->filter(fn($a) => strtolower($a->payment_method ?? '') === 'spm')->count();
+            $jkmm = $admissionsDay->filter(fn($a) => strtolower($a->payment_method ?? '') === 'jkmm')->count();
+            $pks = $admissionsDay->filter(fn($a) => strtolower($a->payment_method ?? '') === 'pks')->count();
+            $umum = $admissionsDay->count() - ($jkn + $spm + $jkmm + $pks);
+            if ($umum < 0) $umum = 0;
+
+            $dayData = [
+                'day' => $day,
+                'date' => $dateStr,
+                'penderita_awal' => $penderitaAwal,
+                'penderita_baru' => $penderitaBaru,
+                'penderita_dari' => $penderitaDari,
+                'keluar_dipulangkan' => $dipulangkan,
+                'keluar_pulang_paksa' => $pulangPaksa,
+                'keluar_lari' => $lari,
+                'keluar_dirujuk' => $dirujuk,
+                'mati_under_48' => $matiUnder48,
+                'mati_over_48' => $matiOver48,
+                'ke_ruang_lain' => $keRuangLain,
+                'sisa_pasien' => $sisaPasien,
+                'ob' => $ob,
+                'hp' => $hp,
+                'ld' => $ld,
+                'tt' => $room->capacity,
+                'jkn' => $jkn,
+                'spm' => $spm,
+                'jkmm' => $jkmm,
+                'pks' => $pks,
+                'umum' => $umum,
+            ];
+
+            $matrix[$day] = $dayData;
+
+            // Accumulate totals
+            $totals['penderita_awal'] += $penderitaAwal;
+            $totals['penderita_baru'] += $penderitaBaru;
+            $totals['penderita_dari'] += $penderitaDari;
+            $totals['keluar_dipulangkan'] += $dipulangkan;
+            $totals['keluar_pulang_paksa'] += $pulangPaksa;
+            $totals['keluar_lari'] += $lari;
+            $totals['keluar_dirujuk'] += $dirujuk;
+            $totals['mati_under_48'] += $matiUnder48;
+            $totals['mati_over_48'] += $matiOver48;
+            $totals['ke_ruang_lain'] += $keRuangLain;
+            $totals['sisa_pasien'] += $sisaPasien;
+            $totals['ob'] += $ob;
+            $totals['hp'] += $hp;
+            $totals['ld'] += $ld;
+            $totals['jkn'] += $jkn;
+            $totals['spm'] += $spm;
+            $totals['jkmm'] += $jkmm;
+            $totals['pks'] += $pks;
+            $totals['umum'] += $umum;
+        }
+
+        return [
+            'matrix' => $matrix,
+            'totals' => $totals,
             'days_in_month' => $daysInMonth,
         ];
     }

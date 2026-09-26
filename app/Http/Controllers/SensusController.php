@@ -10,6 +10,7 @@ use App\Models\PatientTransfer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Services\MonthlyCensusExportService;
 
 class SensusController extends Controller
 {
@@ -428,102 +429,12 @@ class SensusController extends Controller
         if ($user && $user->isAdminRuang() && $user->room_id) {
             $roomId = $user->room_id;
         } else {
-            $roomId = $request->get('room_id', Room::first()?->id);
+            $roomId = $request->get('room_id');
         }
 
-        if (!$roomId || !Room::where('id', $roomId)->exists()) {
-            return redirect()->back()
-                ->withErrors(['export' => 'Gagal mengunduh Excel: Data ruangan belum tersedia di database. Silakan jalankan seeder database (php artisan db:seed).']);
-        }
+        $selectedRoom = $roomId ? Room::find($roomId) : null;
 
-        $room = Room::find($roomId);
-        $fileName = "Rekap_Sensus_SHRI_{$room->code}_{$year}_{$month}.xls";
-
-        // 1. Pasien Aktif Dirawat di Ruangan Ini
-        $activeAdmissions = Admission::where('current_room_id', $room->id)
-            ->where('status', 'active')
-            ->with(['patient', 'initialRoom', 'currentRoom'])
-            ->get();
-
-        // 2. Pasien Keluar / KRS / Meninggal di Bulan Ini
-        $dischargedAdmissions = Admission::where('current_room_id', $room->id)
-            ->whereIn('status', ['discharged', 'deceased', 'transferred_out'])
-            ->whereYear('discharge_date', $year)
-            ->whereMonth('discharge_date', $month)
-            ->with(['patient', 'initialRoom', 'currentRoom'])
-            ->get();
-
-        $monthNames = [
-            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
-            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
-            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
-        ];
-        $monthName = $monthNames[$month] ?? "Bulan {$month}";
-
-        // 3. Hitung Indikator RS (BOR, ALOS, TOI, BTO, NDR, GDR)
-        $indicators = \App\Services\CensusCalculatorService::calculateIndicators($room, $year, $month);
-
-        // 4. Read Logo RSSA as Base64 for Excel Header
-        $logoPath = public_path('logo-rssa.jpg');
-        $logoBase64 = '';
-        if (file_exists($logoPath)) {
-            $logoBase64 = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath));
-        }
-
-        // 5. Kelompokkan Data Berdasarkan Kelas Perawatan untuk Multi-Sheet Export
-        $presentClasses = collect([])
-            ->concat($activeAdmissions->map(fn($a) => $a->room_class ?? $room->room_class))
-            ->concat($dischargedAdmissions->map(fn($a) => $a->room_class ?? $room->room_class))
-            ->filter()
-            ->unique()
-            ->values()
-            ->toArray();
-
-        if (empty($presentClasses) && $room->room_class) {
-            $presentClasses[] = $room->room_class;
-        }
-
-        $allStandardClasses = ['Kelas 1', 'Kelas 2', 'Kelas 3', 'VIP', 'VVIP', 'Non Kelas / Khusus'];
-        $sortedClasses = array_values(array_intersect($allStandardClasses, $presentClasses));
-        foreach ($presentClasses as $pc) {
-            if (!in_array($pc, $sortedClasses)) {
-                $sortedClasses[] = $pc;
-            }
-        }
-
-        $classGroups = [
-            'Semua Kelas' => [
-                'active' => $activeAdmissions,
-                'discharged' => $dischargedAdmissions,
-                'class_label' => 'Semua Kelas (Gabungan)',
-            ]
-        ];
-
-        foreach ($sortedClasses as $cls) {
-            $filteredActive = $activeAdmissions->filter(fn($a) => ($a->room_class ?? $room->room_class) === $cls)->values();
-            $filteredDischarged = $dischargedAdmissions->filter(fn($a) => ($a->room_class ?? $room->room_class) === $cls)->values();
-
-            $classGroups[$cls] = [
-                'active' => $filteredActive,
-                'discharged' => $filteredDischarged,
-                'class_label' => $cls,
-            ];
-        }
-
-        return response()->view('exports.monthly_census_excel', compact(
-            'room',
-            'year',
-            'month',
-            'monthName',
-            'activeAdmissions',
-            'dischargedAdmissions',
-            'indicators',
-            'logoBase64',
-            'classGroups'
-        ))->header('Content-Type', 'application/vnd.ms-excel; charset=UTF-8')
-          ->header('Content-Disposition', "attachment; filename=\"{$fileName}\"")
-          ->header('Pragma', 'no-cache')
-          ->header('Cache-Control', 'must-revalidate, post-check=0, pre-check=0')
-          ->header('Expires', '0');
+        $exportService = new MonthlyCensusExportService();
+        return $exportService->download($year, $month, $selectedRoom);
     }
 }

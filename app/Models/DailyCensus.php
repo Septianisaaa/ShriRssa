@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DailyCensus extends Model
 {
+    protected $table = 'daily_censuses';
+
     protected $fillable = [
         'room_id',
         'census_date',
@@ -15,6 +17,10 @@ class DailyCensus extends Model
         'transfers_in_count',
         'transfers_out_count',
         'discharges_count',
+        'discharges_cured_count',
+        'discharges_aps_count',
+        'discharges_run_count',
+        'discharges_referred_count',
         'deaths_under_48h',
         'deaths_over_48h',
         'remaining_patients',

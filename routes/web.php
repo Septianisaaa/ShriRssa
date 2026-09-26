@@ -9,6 +9,7 @@ use App\Http\Controllers\TransferController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\RoomManagementController;
 use Illuminate\Support\Facades\Auth;
 
 // Root Route: Auto Redirect Based on Auth Status & Role
@@ -78,6 +79,12 @@ Route::middleware(['auth', 'role:superadmin'])->prefix('shri')->name('shri.')->g
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
     Route::post('/users/admin-ruang', [UserManagementController::class, 'storeAdminRuang'])->name('users.store_admin_ruang');
     Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+
+    // Kelola Ruangan / Instalasi / Kelas Perawatan & TT
+    Route::get('/rooms', [RoomManagementController::class, 'index'])->name('rooms.index');
+    Route::post('/rooms', [RoomManagementController::class, 'store'])->name('rooms.store');
+    Route::put('/rooms/{room}', [RoomManagementController::class, 'update'])->name('rooms.update');
+    Route::delete('/rooms/{room}', [RoomManagementController::class, 'destroy'])->name('rooms.destroy');
 });
 
 // ==========================================

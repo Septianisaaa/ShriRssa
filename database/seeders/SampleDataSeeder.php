@@ -9,237 +9,176 @@ use App\Models\Admission;
 use App\Models\PatientTransfer;
 use App\Models\DailyCensus;
 use Carbon\Carbon;
-
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class SampleDataSeeder extends Seeder
 {
     public function run(): void
     {
-        $rooms = Room::all();
-        $firstRoom = $rooms->first();
+        // 1. Ensure RoomSeeder runs first so all rooms exist with valid capacities (> 0 TT)
+        $this->call(RoomSeeder::class);
 
-        // 1. Seed Petugas SHRI (Superadmin)
-        User::updateOrCreate(
-            ['email' => 'shri@rssa.go.id'],
-            [
-                'name' => 'Petugas SHRI (Superadmin)',
-                'username' => 'shri',
-                'password' => Hash::make('password'),
-                'role' => 'superadmin',
-                'phone' => '081234567890',
-            ]
-        );
-
-        // 2. Seed Admin Ruangan (Admin)
-        if ($firstRoom) {
-            User::updateOrCreate(
-                ['email' => 'admin.ruang@rssa.go.id'],
-                [
-                    'name' => 'Admin ' . $firstRoom->name,
-                    'username' => 'adminruang',
-                    'password' => Hash::make('password'),
-                    'role' => 'admin',
-                    'room_id' => $firstRoom->id,
-                    'phone' => '089876543210',
-                ]
-            );
+        $rooms = Room::where('is_active', true)->get();
+        if ($rooms->isEmpty()) {
+            return;
         }
 
-
-        $firstNamesL = ['Budi', 'Ahmad', 'Eko', 'Slamet', 'Bambang', 'Hendra', 'Agus', 'Sugeng', 'Hartono', 'Bayu', 'Fajar', 'Dwi', 'Tri', 'Anang', 'Supriadi', 'Doni', 'Rudi', 'Heri', 'Joko', 'Wawan'];
-        $firstNamesP = ['Siti', 'Dewi', 'Rina', 'Sri', 'Ratna', 'Endang', 'Maryam', 'Yuni', 'Indah', 'Maya', 'Nurul', 'Eka', 'Wati', 'Titin', 'Nining', 'Lilis', 'Diah', 'Eni', 'Retno', 'Sulastri'];
-        $lastNames = ['Santoso', 'Aminah', 'Fauzi', 'Rahmawati', 'Prasetyo', 'Wijaya', 'Utomo', 'Subagyo', 'Kusuma', 'Putra', 'Putri', 'Hidayat', 'Saputra', 'Permana', 'Suryani', 'Mulyono', 'Wibowo', 'Nugroho', 'Handayani', 'Lestari'];
-
-        $diagnoses = [
-            'DHF (Demam Berdarah Dengue)',
-            'Post Op Appendektomi',
-            'Pneumonia Komunitas',
-            'Gagal Jantung Kongestif (CHF)',
-            'Stroke Iskemik',
-            'Diabetes Mellitus Tipe 2',
-            'CKD (Gagal Ginjal Kronis) Stage V',
-            'Bronkopneumonia',
-            'Post Op Cholecystectomy',
-            'Infark Miokard Akut (IMA)',
-            'Fraktur Femur Sinistra',
-            'Asthma Bronkial Eksaserbasi',
-            'Sepsis Severe',
-            'Gastroenteritis Akut (GEA)',
-            'Hypertension Heart Disease',
-        ];
-
-        $patientIndex = 1000;
-
-        // Truncate tables for a clean seed
-        \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
-        PatientTransfer::truncate();
+        // Disable FK constraints for clean truncation
+        Schema::disableForeignKeyConstraints();
         DailyCensus::truncate();
+        PatientTransfer::truncate();
         Admission::truncate();
         Patient::truncate();
-        \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+        Schema::enableForeignKeyConstraints();
+
+        $firstNamesL = ['Ahmad', 'Budi', 'Candra', 'Deni', 'Eko', 'Fajar', 'Giri', 'Hendra', 'Irfan', 'Joko', 'Kiki', 'Lukman', 'Marno', 'Nugroho', 'Oki', 'Prabowo', 'Rian', 'Slamet', 'Teguh', 'Utomo', 'Vina', 'Wahyu', 'Yudi', 'Zainal'];
+        $firstNamesP = ['Ani', 'Bunga', 'Citra', 'Dewi', 'Endang', 'Fitri', 'Gita', 'Hani', 'Indah', 'Juli', 'Kartika', 'Laras', 'Maya', 'Nita', 'Olivia', 'Putri', 'Ratna', 'Siti', 'Titi', 'Utami', 'Vivi', 'Wulan', 'Yuni', 'Zahra'];
+        $lastNames  = ['Santoso', 'Wijaya', 'Saputra', 'Hidayat', 'Kusuma', 'Nugraha', 'Pratama', 'Wibowo', 'Setiawan', 'Ramadhan', 'Laksana', 'Kurnianto', 'Purnama'];
+
+        $paymentMethods = ['JKN', 'SPM', 'JKMM', 'PKS', 'UMUM'];
+        $diagnoses = [
+            'Diabetes Mellitus Tipe 2', 'Hipertensi Grade II', 'Stroke Infark', 'DHF (Demam Berdarah Dengue)',
+            'Pneumonia Komunitas', 'Gastroenteritis Akut', 'Dyspepsia Syndrome', 'Congestive Heart Failure',
+            'CKD Stage V', 'Asthma Bronchiale', 'Thypoid Fever', 'Appendicitis Akut'
+        ];
+
+        // Rentang Sensus Harian: 1 Januari 2026 s/d 26 September 2026 (9 Bulan)
+        $startDate = Carbon::create(2026, 1, 1);
+        $endDate = Carbon::create(2026, 9, 26);
+
+        $dailyCensusesData = [];
+        $previousRemaining = [];
+        foreach ($rooms as $r) {
+            $cap = max(6, $r->capacity);
+            $previousRemaining[$r->id] = rand(4, max(4, (int) floor($cap * 0.6)));
+        }
+
+        $current = $startDate->copy();
+        while ($current->lte($endDate)) {
+            $dStr = $current->toDateString();
+
+            foreach ($rooms as $room) {
+                $cap = max(6, $room->capacity);
+                $initial = $previousRemaining[$room->id] ?? rand(4, max(4, (int) floor($cap * 0.6)));
+
+                // NON-ZERO GUARANTEE FOR ALL CATEGORIES
+                $admissionsToday = rand(1, 3);
+                $transfersInToday = rand(1, 2);
+                $transfersOutToday = rand(1, 2);
+
+                $dischargesCured = rand(1, 3);
+                $dischargesAps = rand(1, 2);
+                $dischargesRun = rand(1, 2);
+                $dischargesReferred = rand(1, 2);
+                $deathsU48 = rand(1, 2);
+                $deathsO48 = rand(1, 2);
+
+                $totalDischargesHidup = $dischargesCured + $dischargesAps + $dischargesRun + $dischargesReferred;
+
+                $remaining = $initial + $admissionsToday + $transfersInToday - $totalDischargesHidup - $transfersOutToday - $deathsU48 - $deathsO48;
+                $remaining = max(3, min($cap - 1, $remaining));
+                $previousRemaining[$room->id] = $remaining;
+
+                $dailyCensusesData[] = [
+                    'room_id' => $room->id,
+                    'census_date' => $dStr,
+                    'initial_patients' => $initial,
+                    'admissions_count' => $admissionsToday,
+                    'transfers_in_count' => $transfersInToday,
+                    'transfers_out_count' => $transfersOutToday,
+                    'discharges_count' => $totalDischargesHidup,
+                    'discharges_cured_count' => $dischargesCured,
+                    'discharges_aps_count' => $dischargesAps,
+                    'discharges_run_count' => $dischargesRun,
+                    'discharges_referred_count' => $dischargesReferred,
+                    'deaths_under_48h' => $deathsU48,
+                    'deaths_over_48h' => $deathsO48,
+                    'remaining_patients' => $remaining,
+                    'care_days' => $remaining,
+                    'total_length_of_stay' => $totalDischargesHidup * rand(2, 5),
+                    'created_at' => $current->toDateTimeString(),
+                    'updated_at' => $current->toDateTimeString(),
+                ];
+            }
+
+            $current->addDay();
+        }
+
+        // Bulk insert daily censuses (chunk of 1000)
+        foreach (array_chunk($dailyCensusesData, 1000) as $chunk) {
+            DailyCensus::insert($chunk);
+        }
+
+        // 2. Generate Active Patients for Today across ALL Rooms (~50-60% Occupancy)
+        $patientsData = [];
+        $admissionsData = [];
+        $patientIdx = 1000;
+        $admIdCounter = 1;
 
         foreach ($rooms as $room) {
-            // Variasikan kelas untuk ruangan ini agar setiap tab sheet kelas terisi data dummy
-            $roomClasses = [$room->room_class];
-            if ($room->category === 'Grand Paviliun') {
-                $roomClasses = ['VIP', 'VVIP', 'Kelas 1'];
-            } elseif (str_contains($room->category, 'IPJT')) {
-                $roomClasses = ['VIP', 'Kelas 1', 'Kelas 2', 'Kelas 3'];
-            } elseif (str_contains($room->category, 'IPIT')) {
-                $roomClasses = ['Kelas 1', 'Kelas 2', 'Kelas 3'];
-            } else {
-                $roomClasses = array_unique([$room->room_class, 'Kelas 1', 'Kelas 2', 'Kelas 3', 'VIP']);
-            }
-            $roomClasses = array_values($roomClasses);
+            $cap = max(6, $room->capacity);
+            $targetActive = max(3, (int) floor($cap * 0.55)); // ~55% capacity
 
-            // Seed 4-6 Pasien Aktif Dirawat di setiap ruangan (terbagi di berbagai kelas)
-            $activeCount = max(4, count($roomClasses) * 2);
-            for ($i = 0; $i < $activeCount; $i++) {
-                $gender = rand(0, 1) ? 'L' : 'P';
+            for ($k = 0; $k < $targetActive; $k++) {
+                $patientIdx++;
+                $gender = (rand(0, 1) === 1) ? 'L' : 'P';
                 $fn = ($gender === 'L') ? $firstNamesL[array_rand($firstNamesL)] : $firstNamesP[array_rand($firstNamesP)];
                 $ln = $lastNames[array_rand($lastNames)];
-                $patientIndex++;
 
-                $patient = Patient::create([
-                    'rm_number' => sprintf('120%05d', $patientIndex),
+                $pId = $patientIdx - 999;
+                $patientsData[] = [
+                    'id' => $pId,
+                    'rm_number' => sprintf('120%05d', $patientIdx),
                     'name' => "$fn $ln",
                     'gender' => $gender,
                     'address' => 'Kota Malang / Kab. Malang',
                     'phone' => '08' . rand(111111111, 999999999),
-                ]);
+                    'created_at' => Carbon::now()->subDays(rand(1, 4))->toDateTimeString(),
+                    'updated_at' => Carbon::now()->subDays(rand(1, 4))->toDateTimeString(),
+                ];
 
-                $assignedClass = $roomClasses[$i % count($roomClasses)];
+                // Ensure all 5 payment methods are evenly distributed
+                $payment = $paymentMethods[$k % count($paymentMethods)];
+                $assignedClass = $room->room_class ?? 'Kelas 3';
+                $admId = $admIdCounter++;
 
-                // Tanggal MRS: Sebagian MRS bulan lalu (Carried Over), sebagian bulan ini
-                $isLastMonth = rand(0, 3) === 0;
-                $admissionDate = $isLastMonth 
-                    ? Carbon::now()->subMonth()->setDay(rand(1, 28))->setHour(rand(7, 21))->setMinute(rand(0, 59))
-                    : Carbon::now()->subDays(rand(1, 15))->setHour(rand(7, 21))->setMinute(rand(0, 59));
-
-                Admission::create([
-                    'patient_id' => $patient->id,
+                $admissionsData[] = [
+                    'id' => $admId,
+                    'patient_id' => $pId,
                     'current_room_id' => $room->id,
                     'initial_room_id' => $room->id,
                     'room_class' => $assignedClass,
-                    'admission_date' => $admissionDate,
+                    'admission_date' => Carbon::now()->subDays(rand(1, 4))->setHour(rand(7, 21))->toDateTimeString(),
+                    'discharge_date' => null,
+                    'discharge_condition' => null,
                     'status' => 'active',
+                    'length_of_stay' => null,
+                    'payment_method' => $payment,
                     'diagnosis' => $diagnoses[array_rand($diagnoses)],
-                ]);
-            }
-
-            // Seed 5-8 Pasien KRS (Keluar/Discharged/Deceased) di setiap ruangan (terbagi di berbagai kelas)
-            $dischargedCount = max(5, count($roomClasses) * 2);
-            for ($j = 0; $j < $dischargedCount; $j++) {
-                $gender = rand(0, 1) ? 'L' : 'P';
-                $fn = ($gender === 'L') ? $firstNamesL[array_rand($firstNamesL)] : $firstNamesP[array_rand($firstNamesP)];
-                $ln = $lastNames[array_rand($lastNames)];
-                $patientIndex++;
-
-                $patient = Patient::create([
-                    'rm_number' => sprintf('120%05d', $patientIndex),
-                    'name' => "$fn $ln",
-                    'gender' => $gender,
-                    'address' => 'Kota Malang / Kab. Malang',
-                    'phone' => '08' . rand(111111111, 999999999),
-                ]);
-
-                $assignedClass = $roomClasses[$j % count($roomClasses)];
-
-                // Berbagai Kasus Spesifik:
-                // 0: One Day Care (MRS & KRS hari yang sama)
-                // 1: Pasien Meninggal < 48 jam
-                // 2: Pasien Meninggal >= 48 jam
-                // 3: Pasien Sembuh / Membaik (Biasa)
-                // 4: Pasien Lintas Bulan (MRS bulan lalu, KRS bulan ini)
-                $caseType = $j % 5;
-
-                if ($caseType === 0) {
-                    // One Day Care (ODC)
-                    $admDate = Carbon::now()->subDays(rand(2, 20))->setHour(8)->setMinute(0);
-                    $discDate = $admDate->copy()->setHour(17)->setMinute(30);
-                    $condition = 'improved';
-                    $status = 'discharged';
-                    $los = 1;
-                } elseif ($caseType === 1) {
-                    // Meninggal < 48 jam (misal 20 jam)
-                    $admDate = Carbon::now()->subDays(rand(2, 20))->setHour(10)->setMinute(0);
-                    $discDate = $admDate->copy()->addHours(20);
-                    $condition = 'deceased_under_48h';
-                    $status = 'deceased';
-                    $los = 1;
-                } elseif ($caseType === 2) {
-                    // Meninggal >= 48 jam (misal 72 jam / 3 hari)
-                    $admDate = Carbon::now()->subDays(rand(5, 20))->setHour(9)->setMinute(0);
-                    $discDate = $admDate->copy()->addDays(3)->setHour(11)->setMinute(0);
-                    $condition = 'deceased_over_48h';
-                    $status = 'deceased';
-                    $los = 3;
-                } elseif ($caseType === 3) {
-                    // Sembuh biasa (misal 4 hari)
-                    $admDate = Carbon::now()->subDays(rand(5, 20))->setHour(10)->setMinute(0);
-                    $discDate = $admDate->copy()->addDays(4)->setHour(14)->setMinute(0);
-                    $condition = 'cured';
-                    $status = 'discharged';
-                    $los = 4;
-                } else {
-                    // Pasien Lintas Bulan (MRS bulan lalu)
-                    $admDate = Carbon::now()->subMonth()->setDay(rand(15, 25))->setHour(9)->setMinute(0);
-                    $discDate = Carbon::now()->setDay(rand(2, 10))->setHour(11)->setMinute(0);
-                    $condition = 'cured';
-                    $status = 'discharged';
-                    $los = (int) $admDate->copy()->startOfDay()->diffInDays($discDate->copy()->startOfDay());
-                }
-
-                Admission::create([
-                    'patient_id' => $patient->id,
-                    'current_room_id' => $room->id,
-                    'initial_room_id' => $room->id,
-                    'room_class' => $assignedClass,
-                    'admission_date' => $admDate,
-                    'discharge_date' => $discDate,
-                    'discharge_condition' => $condition,
-                    'status' => $status,
-                    'length_of_stay' => $los,
-                    'diagnosis' => $diagnoses[array_rand($diagnoses)],
-                ]);
-            }
-
-            // Seed Daily Censuses (Rekap Sensus Harian) untuk bulan berjalan
-            $today = Carbon::today();
-            for ($day = 1; $day <= $today->day; $day++) {
-                $cDate = Carbon::create($today->year, $today->month, $day)->toDateString();
-                DailyCensus::updateOrCreate(
-                    ['room_id' => $room->id, 'census_date' => $cDate],
-                    [
-                        'initial_patients' => rand(5, 12),
-                        'admissions_count' => rand(0, 3),
-                        'transfers_in_count' => rand(0, 2),
-                        'transfers_out_count' => rand(0, 2),
-                        'discharges_count' => rand(0, 2),
-                        'deaths_under_48h' => rand(0, 1),
-                        'deaths_over_48h' => rand(0, 1),
-                        'remaining_patients' => rand(5, 12),
-                        'care_days' => rand(5, 12),
-                        'total_length_of_stay' => rand(5, 20),
-                    ]
-                );
+                    'created_at' => Carbon::now()->subDays(rand(1, 4))->toDateTimeString(),
+                    'updated_at' => Carbon::now()->subDays(rand(1, 4))->toDateTimeString(),
+                ];
             }
         }
 
-        // Seed 8-10 Mutasi Pindahan Pasien Antar Ruang (Pending, Accepted, Rejected)
-        $allAdmissions = Admission::where('status', 'active')->get();
-        if ($allAdmissions->count() >= 5) {
-            $sampleAdmissions = $allAdmissions->random(min(10, $allAdmissions->count()));
-            $index = 0;
+        foreach (array_chunk($patientsData, 500) as $chunk) {
+            Patient::insert($chunk);
+        }
+        foreach (array_chunk($admissionsData, 500) as $chunk) {
+            Admission::insert($chunk);
+        }
+
+        // 3. Create Pending & Accepted Transfers (8 Active Pending Requests)
+        $activeAdmissions = Admission::where('status', 'active')->get();
+        if ($activeAdmissions->count() >= 10) {
+            $sampleAdmissions = $activeAdmissions->random(min(30, $activeAdmissions->count()));
+            $transferIdx = 0;
             foreach ($sampleAdmissions as $adm) {
-                $targetRoom = Room::where('id', '!=', $adm->current_room_id)->inRandomOrder()->first();
+                $targetRoom = $rooms->where('id', '!=', $adm->current_room_id)->random();
                 if ($targetRoom) {
-                    $statusType = $index % 3; // 0: pending, 1: accepted, 2: rejected
-                    $status = ($statusType === 0) ? 'pending' : (($statusType === 1) ? 'accepted' : 'rejected');
-                    $transferDate = Carbon::now()->subHours(rand(12, 72));
-                    $confirmedAt = ($status === 'pending') ? null : $transferDate->copy()->addHours(rand(1, 8));
+                    $isPending = ($transferIdx < 8);
+                    $status = $isPending ? 'pending' : 'accepted';
+                    $transferDate = Carbon::now()->subHours(rand(2, 48));
 
                     PatientTransfer::create([
                         'admission_id' => $adm->id,
@@ -247,15 +186,15 @@ class SampleDataSeeder extends Seeder
                         'to_room_id' => $targetRoom->id,
                         'transfer_date' => $transferDate,
                         'status' => $status,
-                        'accepted_at' => $confirmedAt,
-                        'notes' => 'Alih perawatan / perbaikan kondisi indikasi medis',
+                        'accepted_at' => $isPending ? null : $transferDate->copy()->addHours(rand(1, 4)),
+                        'notes' => $isPending ? 'Permohonan mutasi alih perawatan (Pending)' : 'Mutasi disetujui',
                     ]);
 
-                    if ($status === 'accepted') {
+                    if (!$isPending) {
                         $adm->current_room_id = $targetRoom->id;
                         $adm->save();
                     }
-                    $index++;
+                    $transferIdx++;
                 }
             }
         }

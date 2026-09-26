@@ -497,6 +497,16 @@
                     <span class="nav-text">Mutasi Pasien</span>
                 </a>
             </li>
+
+            @if($isSuper)
+            <li class="nav-item {{ request()->routeIs('*rooms.*') ? 'active' : '' }}">
+                <a href="{{ route('shri.rooms.index') }}" title="Kelola Ruangan">
+                    <i class="fa-solid fa-bed"></i>
+                    <span class="nav-text">Kelola Ruangan</span>
+                </a>
+            </li>
+            @endif
+
             <li class="nav-item {{ request()->routeIs('*guide.*') ? 'active' : '' }}">
                 <a href="{{ route($rolePrefix . 'guide.index') }}" title="Buku Panduan">
                     <i class="fa-solid fa-book-open"></i>
