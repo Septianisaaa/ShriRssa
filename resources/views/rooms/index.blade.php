@@ -4,25 +4,184 @@
 @section('header_title', 'Kelola Ruangan, Instalasi & Kelas Perawatan')
 @section('header_subtitle', 'Tambah dan atur daftar instalasi, kelas perawatan, serta kapasitas tempat tidur (TT)')
 
+@push('styles')
+<style>
+    /* Metric Cards Grid */
+    .metrics-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .metric-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 1.15rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        position: relative;
+    }
+
+    .metric-top {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .metric-icon-box {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+        flex-shrink: 0;
+    }
+
+    .icon-rooms { background: #e0f2fe; color: #0284c7; }
+    .icon-beds { background: #e6f4ea; color: #0f766e; }
+    .icon-instalasi { background: #e8f0fe; color: #1d4ed8; }
+    .icon-classes { background: #fef3c7; color: #d97706; }
+
+    .metric-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .metric-label {
+        font-size: 0.8rem;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.2;
+        margin-top: 0.15rem;
+    }
+
+    .metric-subtext {
+        font-size: 0.725rem;
+        color: #64748b;
+        font-weight: 500;
+        margin-top: 0.5rem;
+    }
+
+    /* Table Footer & Pagination */
+    .table-footer {
+        padding: 0.85rem 1.25rem;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+        color: #64748b;
+        background: #ffffff;
+    }
+
+    .pagination-btns {
+        display: flex;
+        gap: 0.35rem;
+    }
+
+    .btn-page {
+        padding: 0.3rem 0.65rem;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        border-radius: 6px;
+        color: #334155;
+        font-size: 0.775rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .btn-page.active {
+        background: #0f766e;
+        color: #ffffff;
+        border-color: #0f766e;
+    }
+
+    .btn-page:hover:not(.active):not(.disabled) {
+        background: #f8fafc;
+    }
+
+    .btn-page.disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        pointer-events: none;
+        background: #f1f5f9;
+        color: #94a3b8;
+        border-color: #e2e8f0;
+    }
+</style>
+@endpush
+
 @section('content')
 
     <!-- Top Summary Metrics Cards -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
-        <div class="card" style="padding: 1.15rem 1.25rem;">
-            <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Total Ruangan</div>
-            <div style="font-size: 1.65rem; font-weight: 800; color: var(--text-dark); margin-top: 0.2rem;">{{ $rooms->count() }}</div>
+    <div class="metrics-row">
+        <!-- Card 1: Total Ruangan -->
+        <div class="metric-card">
+            <div class="metric-top">
+                <div class="metric-icon-box icon-rooms">
+                    <i class="fa-solid fa-hospital-user"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-label">Total Ruangan</span>
+                    <span class="metric-value">{{ number_format($totalRoomsCount) }} <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Ruangan</span></span>
+                </div>
+            </div>
+            <span class="metric-subtext">Total unit ruangan rawat inap</span>
         </div>
-        <div class="card" style="padding: 1.15rem 1.25rem;">
-            <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Total Tempat Tidur (TT)</div>
-            <div style="font-size: 1.65rem; font-weight: 800; color: #166534; margin-top: 0.2rem;">{{ $rooms->sum('capacity') }} Bed</div>
+
+        <!-- Card 2: Total Tempat Tidur (TT) -->
+        <div class="metric-card">
+            <div class="metric-top">
+                <div class="metric-icon-box icon-beds">
+                    <i class="fa-solid fa-bed"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-label">Total Tempat Tidur (TT)</span>
+                    <span class="metric-value">{{ number_format($totalBedsSum) }} <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">TT</span></span>
+                </div>
+            </div>
+            <span class="metric-subtext">Kapasitas total tempat tidur</span>
         </div>
-        <div class="card" style="padding: 1.15rem 1.25rem;">
-            <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Jumlah Instalasi</div>
-            <div style="font-size: 1.65rem; font-weight: 800; color: #1d4ed8; margin-top: 0.2rem;">{{ $existingCategories->count() }} Instalasi</div>
+
+        <!-- Card 3: Jumlah Instalasi -->
+        <div class="metric-card">
+            <div class="metric-top">
+                <div class="metric-icon-box icon-instalasi">
+                    <i class="fa-solid fa-hospital"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-label">Jumlah Instalasi</span>
+                    <span class="metric-value">{{ number_format($existingCategories->count()) }} <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Instalasi</span></span>
+                </div>
+            </div>
+            <span class="metric-subtext">Kategori unit instalasi perawatan</span>
         </div>
-        <div class="card" style="padding: 1.15rem 1.25rem;">
-            <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Jumlah Kelas Perawatan</div>
-            <div style="font-size: 1.65rem; font-weight: 800; color: #854d0e; margin-top: 0.2rem;">{{ $allClasses->count() }} Kelas</div>
+
+        <!-- Card 4: Jumlah Kelas Perawatan -->
+        <div class="metric-card">
+            <div class="metric-top">
+                <div class="metric-icon-box icon-classes">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="metric-label">Jumlah Kelas Perawatan</span>
+                    <span class="metric-value">{{ number_format($allClasses->count()) }} <span style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Kelas</span></span>
+                </div>
+            </div>
+            <span class="metric-subtext">Klasifikasi kelas perawatan</span>
         </div>
     </div>
 
@@ -58,10 +217,12 @@
     </div>
 
     <!-- Rooms Table -->
-    <div class="card">
-        <h3 class="section-title" style="margin-bottom: 1rem;">Daftar Ruangan Rawat Inap ({{ $rooms->count() }})</h3>
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 1.25rem 1.25rem 0.75rem 1.25rem;">
+            <h3 class="section-title" style="margin-bottom: 0;">Daftar Ruangan Rawat Inap ({{ $totalRoomsCount }})</h3>
+        </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive" style="border: none;">
             <table>
                 <thead>
                     <tr>
@@ -78,7 +239,7 @@
                 <tbody>
                     @forelse($rooms as $r)
                         <tr>
-                            <td>{{ $loop->iteration }}</td>
+                            <td>{{ $rooms->firstItem() + $loop->index }}</td>
                             <td><strong>{{ $r->code }}</strong></td>
                             <td><strong>{{ $r->name }}</strong></td>
                             <td><span class="badge badge-info">{{ $r->category }}</span></td>
@@ -109,6 +270,42 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+
+        <div class="table-footer">
+            <div>
+                @if($rooms->total() > 0)
+                    Menampilkan {{ $rooms->firstItem() }} – {{ $rooms->lastItem() }} dari {{ $rooms->total() }} ruangan
+                @else
+                    Menampilkan 0 ruangan
+                @endif
+            </div>
+            @if($rooms->hasPages())
+                <div class="pagination-btns">
+                    {{-- Previous Page Link --}}
+                    @if($rooms->onFirstPage())
+                        <span class="btn-page disabled">&lt;</span>
+                    @else
+                        <a href="{{ $rooms->previousPageUrl() }}" class="btn-page">&lt;</a>
+                    @endif
+
+                    {{-- Page Numbers --}}
+                    @foreach($rooms->getUrlRange(1, $rooms->lastPage()) as $page => $url)
+                        @if($page == $rooms->currentPage())
+                            <span class="btn-page active">{{ $page }}</span>
+                        @else
+                            <a href="{{ $url }}" class="btn-page">{{ $page }}</a>
+                        @endif
+                    @endforeach
+
+                    {{-- Next Page Link --}}
+                    @if($rooms->hasMorePages())
+                        <a href="{{ $rooms->nextPageUrl() }}" class="btn-page">&gt;</a>
+                    @else
+                        <span class="btn-page disabled">&gt;</span>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
 

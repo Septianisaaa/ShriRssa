@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Room;
 use App\Models\Admission;
 use App\Models\PatientTransfer;
+use App\Models\Room;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -41,17 +43,17 @@ class DashboardController extends Controller
         if ($filterSearch) {
             $query->where(function ($q) use ($filterSearch) {
                 $q->where('name', 'like', "%{$filterSearch}%")
-                  ->orWhere('code', 'like', "%{$filterSearch}%");
+                    ->orWhere('code', 'like', "%{$filterSearch}%");
             });
         }
 
         // 4. Fetch Rooms with active patient count
-        $rooms = $query->withCount(['admissions as current_patients' => function ($q) {
+        $allRooms = $query->withCount(['admissions as current_patients' => function ($q) {
             $q->where('status', 'active');
         }])->get();
 
         // Attach computed status and percentage to each room
-        $rooms->transform(function ($room) {
+        $allRooms->transform(function ($room) {
             $cap = (int) $room->capacity;
             $curr = (int) $room->current_patients;
             $pct = ($cap > 0) ? min(100, round(($curr / $cap) * 100)) : 0;
@@ -76,10 +78,26 @@ class DashboardController extends Controller
 
         // Filter by Status if requested
         if ($filterStatus) {
-            $rooms = $rooms->filter(fn($r) => $r->status_label === $filterStatus)->values();
+            $allRooms = $allRooms->filter(fn ($r) => $r->status_label === $filterStatus)->values();
         }
 
-        // 5. Calculate Hospital/Scoped Aggregated Metrics
+        // 5. Paginate 15 data per page
+        $perPage = 15;
+        $currentPage = Paginator::resolveCurrentPage() ?: 1;
+        $currentPageItems = $allRooms->slice(($currentPage - 1) * $perPage, $perPage)->values();
+
+        $rooms = new LengthAwarePaginator(
+            $currentPageItems,
+            $allRooms->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        // 6. Calculate Hospital/Scoped Aggregated Metrics
         if ($user && $user->isAdminRuang() && $user->room_id) {
             $scopedRoomIds = [$user->room_id];
         } else {
@@ -97,7 +115,7 @@ class DashboardController extends Controller
         if ($user && $user->isAdminRuang() && $user->room_id) {
             $pendingTransfersQuery->where(function ($q) use ($user) {
                 $q->where('from_room_id', $user->room_id)
-                  ->orWhere('to_room_id', $user->room_id);
+                    ->orWhere('to_room_id', $user->room_id);
             });
         }
         $pendingTransfersCount = $pendingTransfersQuery->count();
@@ -119,4 +137,3 @@ class DashboardController extends Controller
         ));
     }
 }
-

@@ -4,6 +4,57 @@
 @section('header_title', 'Mutasi Pasien Pindahan (Transfer In / Out)')
 @section('header_subtitle', 'Konfirmasi Mutasi Pasien Antar Ruangan Perawatan RSUD Dr. Saiful Anwar')
 
+@push('styles')
+<style>
+    .table-footer {
+        padding: 0.85rem 1.25rem;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+        color: #64748b;
+        background: #ffffff;
+    }
+
+    .pagination-btns {
+        display: flex;
+        gap: 0.35rem;
+    }
+
+    .btn-page {
+        padding: 0.3rem 0.65rem;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        border-radius: 6px;
+        color: #334155;
+        font-size: 0.775rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .btn-page.active {
+        background: #0f766e;
+        color: #ffffff;
+        border-color: #0f766e;
+    }
+
+    .btn-page:hover:not(.active):not(.disabled) {
+        background: #f8fafc;
+    }
+
+    .btn-page.disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        pointer-events: none;
+        background: #f1f5f9;
+        color: #94a3b8;
+        border-color: #e2e8f0;
+    }
+</style>
+@endpush
+
 @section('content')
 
     @php
@@ -118,10 +169,12 @@
     </div>
 
     <!-- Transfer History -->
-    <div class="card">
-        <h3 class="section-title">Riwayat Mutasi Pindahan</h3>
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 1.25rem 1.25rem 0.75rem 1.25rem;">
+            <h3 class="section-title" style="margin-bottom: 0;">Riwayat Mutasi Pindahan</h3>
+        </div>
 
-        <div class="table-responsive">
+        <div class="table-responsive" style="border: none;">
             <table>
                 <thead>
                     <tr>
@@ -175,6 +228,42 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+
+        <div class="table-footer">
+            <div>
+                @if($historyTransfers->total() > 0)
+                    Menampilkan {{ $historyTransfers->firstItem() }} – {{ $historyTransfers->lastItem() }} dari {{ $historyTransfers->total() }} riwayat mutasi
+                @else
+                    Menampilkan 0 riwayat mutasi
+                @endif
+            </div>
+            @if($historyTransfers->hasPages())
+                <div class="pagination-btns">
+                    {{-- Previous Page Link --}}
+                    @if($historyTransfers->onFirstPage())
+                        <span class="btn-page disabled">&lt;</span>
+                    @else
+                        <a href="{{ $historyTransfers->previousPageUrl() }}" class="btn-page">&lt;</a>
+                    @endif
+
+                    {{-- Page Numbers --}}
+                    @foreach($historyTransfers->getUrlRange(1, $historyTransfers->lastPage()) as $page => $url)
+                        @if($page == $historyTransfers->currentPage())
+                            <span class="btn-page active">{{ $page }}</span>
+                        @else
+                            <a href="{{ $url }}" class="btn-page">{{ $page }}</a>
+                        @endif
+                    @endforeach
+
+                    {{-- Next Page Link --}}
+                    @if($historyTransfers->hasMorePages())
+                        <a href="{{ $historyTransfers->nextPageUrl() }}" class="btn-page">&gt;</a>
+                    @else
+                        <span class="btn-page disabled">&gt;</span>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
 

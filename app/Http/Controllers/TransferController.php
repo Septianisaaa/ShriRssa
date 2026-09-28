@@ -5,10 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Admission;
 use App\Models\PatientTransfer;
 use App\Models\Room;
+use App\Services\CensusCalculatorService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class TransferController extends Controller
 {
@@ -25,17 +26,17 @@ class TransferController extends Controller
         if ($user && $user->isAdminRuang() && $user->room_id) {
             $pendingQuery->where(function ($q) use ($user) {
                 $q->where('from_room_id', $user->room_id)
-                  ->orWhere('to_room_id', $user->room_id);
+                    ->orWhere('to_room_id', $user->room_id);
             });
 
             $historyQuery->where(function ($q) use ($user) {
                 $q->where('from_room_id', $user->room_id)
-                  ->orWhere('to_room_id', $user->room_id);
+                    ->orWhere('to_room_id', $user->room_id);
             });
         }
 
         $pendingTransfers = $pendingQuery->orderBy('created_at', 'desc')->get();
-        $historyTransfers = $historyQuery->orderBy('updated_at', 'desc')->limit(20)->get();
+        $historyTransfers = $historyQuery->orderBy('updated_at', 'desc')->paginate(10);
 
         $rooms = Room::where('is_active', true)->get();
 
@@ -47,7 +48,7 @@ class TransferController extends Controller
         $user = Auth::user();
         $validated = $request->validate([
             'admission_id' => 'required|exists:admissions,id',
-            'to_room_id' => 'required|exists:rooms,id', 
+            'to_room_id' => 'required|exists:rooms,id',
             'transfer_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
@@ -99,10 +100,10 @@ class TransferController extends Controller
             // Sync sensus harian secara real-time untuk ruangan asal dan ruangan tujuan
             $transferDateStr = Carbon::parse($transfer->transfer_date)->toDateString();
             if ($fromRoom) {
-                \App\Services\CensusCalculatorService::syncRoomDate($fromRoom, $transferDateStr);
+                CensusCalculatorService::syncRoomDate($fromRoom, $transferDateStr);
             }
             if ($toRoom) {
-                \App\Services\CensusCalculatorService::syncRoomDate($toRoom, $transferDateStr);
+                CensusCalculatorService::syncRoomDate($toRoom, $transferDateStr);
             }
         });
 
@@ -123,4 +124,3 @@ class TransferController extends Controller
         return redirect()->back()->with('info', 'Permohonan Mutasi Pasien ditolak.');
     }
 }
-

@@ -270,8 +270,17 @@
         border-color: #0f766e;
     }
 
-    .btn-page:hover:not(.active) {
+    .btn-page:hover:not(.active):not(.disabled) {
         background: #f8fafc;
+    }
+
+    .btn-page.disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        pointer-events: none;
+        background: #f1f5f9;
+        color: #94a3b8;
+        border-color: #e2e8f0;
     }
 </style>
 @endpush
@@ -461,7 +470,7 @@
                             $barColor = ($pct >= 100) ? '#ef4444' : (($pct >= 71) ? '#f59e0b' : '#22c55e');
                         @endphp
                         <tr>
-                            <td style="color: #64748b; font-weight: 500;">{{ $loop->iteration }}</td>
+                            <td style="color: #64748b; font-weight: 500;">{{ $rooms->firstItem() + $loop->index }}</td>
                             <td>
                                 <strong>{{ $room->name }}</strong>
                             </td>
@@ -510,13 +519,38 @@
 
         <div class="table-footer">
             <div>
-                Menampilkan 1 – {{ $rooms->count() }} dari {{ $rooms->count() }} ruangan
+                @if($rooms->total() > 0)
+                    Menampilkan {{ $rooms->firstItem() }} – {{ $rooms->lastItem() }} dari {{ $rooms->total() }} ruangan
+                @else
+                    Menampilkan 0 ruangan
+                @endif
             </div>
-            <div class="pagination-btns">
-                <a href="#" class="btn-page">&lt;</a>
-                <a href="#" class="btn-page active">1</a>
-                <a href="#" class="btn-page">&gt;</a>
-            </div>
+            @if($rooms->hasPages())
+                <div class="pagination-btns">
+                    {{-- Previous Page Link --}}
+                    @if($rooms->onFirstPage())
+                        <span class="btn-page disabled">&lt;</span>
+                    @else
+                        <a href="{{ $rooms->previousPageUrl() }}" class="btn-page">&lt;</a>
+                    @endif
+
+                    {{-- Page Numbers --}}
+                    @foreach($rooms->getUrlRange(1, $rooms->lastPage()) as $page => $url)
+                        @if($page == $rooms->currentPage())
+                            <span class="btn-page active">{{ $page }}</span>
+                        @else
+                            <a href="{{ $url }}" class="btn-page">{{ $page }}</a>
+                        @endif
+                    @endforeach
+
+                    {{-- Next Page Link --}}
+                    @if($rooms->hasMorePages())
+                        <a href="{{ $rooms->nextPageUrl() }}" class="btn-page">&gt;</a>
+                    @else
+                        <span class="btn-page disabled">&gt;</span>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
 

@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\Room;
+use App\Models\User;
 use Database\Seeders\RoomSeeder;
 use Database\Seeders\SampleDataSeeder;
-use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
@@ -21,7 +22,7 @@ class ExampleTest extends TestCase
     public function test_superadmin_can_access_dashboard(): void
     {
         $this->seed([RoomSeeder::class, SampleDataSeeder::class]);
-        $user = User::where('role', 'superadmin')->first();
+        $user = User::factory()->create(['role' => 'superadmin']);
 
         $response = $this->actingAs($user)->get('/shri/dashboard');
         $response->assertStatus(200);
@@ -30,11 +31,12 @@ class ExampleTest extends TestCase
     public function test_admin_ruang_can_access_dashboard_and_only_sees_assigned_room(): void
     {
         $this->seed([RoomSeeder::class, SampleDataSeeder::class]);
-        $user = User::where('role', 'admin')->first();
+        $room = Room::first();
+        $user = User::factory()->create(['role' => 'admin', 'room_id' => $room->id]);
 
         $response = $this->actingAs($user)->get('/admin-ruang/dashboard');
         $response->assertStatus(200);
-        
+
         $rooms = $response->viewData('rooms');
         $this->assertCount(1, $rooms);
         $this->assertEquals($user->room_id, $rooms->first()->id);
@@ -44,7 +46,7 @@ class ExampleTest extends TestCase
     public function test_superadmin_sees_all_rooms_and_no_clock(): void
     {
         $this->seed([RoomSeeder::class, SampleDataSeeder::class]);
-        $user = User::where('role', 'superadmin')->first();
+        $user = User::factory()->create(['role' => 'superadmin']);
 
         $response = $this->actingAs($user)->get('/shri/dashboard');
         $response->assertStatus(200);
@@ -80,6 +82,3 @@ class ExampleTest extends TestCase
         $this->assertDatabaseHas('users', ['username' => 'petugasvalid']);
     }
 }
-
-
-
