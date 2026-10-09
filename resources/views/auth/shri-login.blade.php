@@ -176,7 +176,7 @@
         <div class="auth-header">
             <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" class="auth-logo">
             <h1>Login Petugas SHRI</h1>
-            <p>Portal Superadmin Sensus Harian Rawat Inap</p>
+            <p>Portal Admin Sensus Harian Rawat Inap</p>
         </div>
 
         @if(session('info'))
@@ -215,7 +215,7 @@
             </div>
 
             <button type="submit" class="btn btn-primary">
-                Masuk Petugas SHRI (Superadmin)
+                Masuk Petugas SHRI (Admin)
             </button>
         </form>
 

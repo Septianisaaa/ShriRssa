@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Admission;
 use App\Models\PatientTransfer;
 use App\Models\Room;
+use App\Services\CensusCalculatorService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use RuntimeException;
 
 class TransferController extends Controller
 {
@@ -16,50 +18,87 @@ class TransferController extends Controller
     {
         $user = Auth::user();
 
-        $pendingQuery = PatientTransfer::with(['admission.patient', 'fromRoom', 'toRoom'])
-            ->where('status', 'pending');
+        $pendingQuery = PatientTransfer::with([
+            'admission.patient',
+            'fromRoom',
+            'toRoom',
+        ])->where('status', 'pending');
 
-        $historyQuery = PatientTransfer::with(['admission.patient', 'fromRoom', 'toRoom'])
-            ->where('status', '!=', 'pending');
+        $historyQuery = PatientTransfer::with([
+            'admission.patient',
+            'fromRoom',
+            'toRoom',
+        ])->where('status', '!=', 'pending');
 
         if ($user && $user->isAdminRuang() && $user->room_id) {
-            $pendingQuery->where(function ($q) use ($user) {
-                $q->where('from_room_id', $user->room_id)
-                  ->orWhere('to_room_id', $user->room_id);
+            $pendingQuery->where(function ($query) use ($user) {
+                $query->where('from_room_id', $user->room_id)
+                    ->orWhere('to_room_id', $user->room_id);
             });
 
-            $historyQuery->where(function ($q) use ($user) {
-                $q->where('from_room_id', $user->room_id)
-                  ->orWhere('to_room_id', $user->room_id);
+            $historyQuery->where(function ($query) use ($user) {
+                $query->where('from_room_id', $user->room_id)
+                    ->orWhere('to_room_id', $user->room_id);
             });
         }
 
-        $pendingTransfers = $pendingQuery->orderBy('created_at', 'desc')->get();
-        $historyTransfers = $historyQuery->orderBy('updated_at', 'desc')->limit(20)->get();
+        $pendingTransfers = $pendingQuery
+            ->orderByDesc('created_at')
+            ->get();
+
+        $historyTransfers = $historyQuery
+            ->orderByDesc('updated_at')
+            ->limit(20)
+            ->get();
 
         $rooms = Room::where('is_active', true)->get();
 
-        return view('transfers.index', compact('pendingTransfers', 'historyTransfers', 'rooms'));
+        return view('transfers.index', compact(
+            'pendingTransfers',
+            'historyTransfers',
+            'rooms'
+        ));
     }
 
     public function store(Request $request)
     {
         $user = Auth::user();
+
         $validated = $request->validate([
             'admission_id' => 'required|exists:admissions,id',
-            'to_room_id' => 'required|exists:rooms,id', 
+            'to_room_id' => 'required|exists:rooms,id',
             'transfer_date' => 'required|date',
-            'notes' => 'nullable|string',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
-        $admission = Admission::findOrFail($validated['admission_id']);
+        $admission = Admission::findOrFail(
+            $validated['admission_id']
+        );
 
-        if ($user && $user->isAdminRuang() && $user->room_id && $admission->current_room_id != $user->room_id) {
-            abort(403, 'Anda hanya dapat mengajukan mutasi untuk pasien yang dirawat di ruangan Anda.');
+        if (
+            $user &&
+            $user->isAdminRuang() &&
+            $user->room_id &&
+            $admission->current_room_id != $user->room_id
+        ) {
+            abort(
+                403,
+                'Anda hanya dapat mengajukan mutasi untuk pasien yang dirawat di ruangan Anda.'
+            );
         }
 
-        if ($admission->current_room_id == $validated['to_room_id']) {
-            return redirect()->back()->withErrors(['to_room_id' => 'Ruangan tujuan harus berbeda dengan ruangan saat ini.']);
+        if ($admission->status !== 'active') {
+            return back()->withErrors([
+                'admission_id' => 'Pasien tidak sedang aktif dirawat.',
+            ])->withInput();
+        }
+
+        if (
+            $admission->current_room_id == $validated['to_room_id']
+        ) {
+            return back()->withErrors([
+                'to_room_id' => 'Ruangan tujuan harus berbeda dengan ruangan saat ini.',
+            ])->withInput();
         }
 
         PatientTransfer::create([
@@ -71,56 +110,140 @@ class TransferController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        return redirect()->back()->with('success', 'Permohonan Mutasi Transfer Out telah dikirim ke Ruangan Tujuan!');
+        return back()->with(
+            'success',
+            'Permohonan mutasi transfer out berhasil dikirim ke ruangan tujuan.'
+        );
     }
 
     public function accept(PatientTransfer $transfer)
     {
         $user = Auth::user();
-        if ($user && $user->isAdminRuang() && $user->room_id && $transfer->to_room_id != $user->room_id) {
-            abort(403, 'Anda tidak berhak mengonfirmasi mutasi masuk ke ruangan lain.');
+
+        // Hanya ruangan tujuan yang boleh menerima mutasi.
+        if (
+            $user &&
+            $user->isAdminRuang() &&
+            $user->room_id &&
+            $transfer->to_room_id != $user->room_id
+        ) {
+            abort(
+                403,
+                'Anda tidak berhak mengonfirmasi mutasi masuk ke ruangan lain.'
+            );
         }
 
         DB::transaction(function () use ($transfer) {
-            $transfer->status = 'accepted';
-            $transfer->accepted_at = Carbon::now();
-            $transfer->save();
+            // Kunci transfer agar tidak diproses bersamaan.
+            $lockedTransfer = PatientTransfer::whereKey($transfer->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            // Update lokasi ruangan aktif pasien ke ruangan baru
-            $admission = $transfer->admission;
-            $fromRoom = $transfer->fromRoom;
-            $toRoom = $transfer->toRoom;
+            if ($lockedTransfer->status !== 'pending') {
+                throw new RuntimeException(
+                    'Permohonan mutasi sudah diproses sebelumnya.'
+                );
+            }
 
-            $admission->current_room_id = $transfer->to_room_id;
+            $admission = Admission::whereKey(
+                $lockedTransfer->admission_id
+            )->lockForUpdate()->firstOrFail();
+
+            // Pastikan pasien masih aktif di ruang asal.
+            if (
+                $admission->status !== 'active' ||
+                $admission->current_room_id != $lockedTransfer->from_room_id
+            ) {
+                throw new RuntimeException(
+                    'Data ruang aktif pasien sudah berubah. Periksa kembali sebelum menerima mutasi.'
+                );
+            }
+
+            $lockedTransfer->status = 'accepted';
+            $lockedTransfer->accepted_at = Carbon::now();
+            $lockedTransfer->save();
+
+            // Pindahkan pasien hanya setelah mutasi diterima.
+            $admission->current_room_id = $lockedTransfer->to_room_id;
             $admission->admission_type = 'transfer';
             $admission->status = 'active';
             $admission->save();
 
-            // Sync sensus harian secara real-time untuk ruangan asal dan ruangan tujuan
-            $transferDateStr = Carbon::parse($transfer->transfer_date)->toDateString();
-            if ($fromRoom) {
-                \App\Services\CensusCalculatorService::syncRoomDate($fromRoom, $transferDateStr);
+            $transferDate = Carbon::parse(
+                $lockedTransfer->transfer_date
+            )->toDateString();
+
+            $lockedTransfer->load(['fromRoom', 'toRoom']);
+
+            if ($lockedTransfer->fromRoom) {
+                CensusCalculatorService::syncRoomDate(
+                    $lockedTransfer->fromRoom,
+                    $transferDate
+                );
             }
-            if ($toRoom) {
-                \App\Services\CensusCalculatorService::syncRoomDate($toRoom, $transferDateStr);
+
+            if ($lockedTransfer->toRoom) {
+                CensusCalculatorService::syncRoomDate(
+                    $lockedTransfer->toRoom,
+                    $transferDate
+                );
             }
         });
 
-        return redirect()->back()->with('success', 'Mutasi Pasien (Transfer In) berhasil dikonfirmasi! Data pasien otomatis berpindah ke ruangan Anda.');
+        return back()->with(
+            'success',
+            'Mutasi berhasil diterima. Pasien telah dipindahkan ke ruangan tujuan.'
+        );
     }
 
-    public function reject(PatientTransfer $transfer)
+    public function reject(Request $request, PatientTransfer $transfer)
     {
         $user = Auth::user();
-        if ($user && $user->isAdminRuang() && $user->room_id && $transfer->to_room_id != $user->room_id) {
-            abort(403, 'Anda tidak berhak menolak mutasi masuk ke ruangan lain.');
+
+        // Hanya ruangan tujuan yang boleh menolak mutasi.
+        if (
+            $user &&
+            $user->isAdminRuang() &&
+            $user->room_id &&
+            $transfer->to_room_id != $user->room_id
+        ) {
+            abort(
+                403,
+                'Anda tidak berhak menolak mutasi ini.'
+            );
         }
 
-        $transfer->status = 'rejected';
-        $transfer->accepted_at = Carbon::now();
-        $transfer->save();
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|max:1000',
+        ]);
 
-        return redirect()->back()->with('info', 'Permohonan Mutasi Pasien ditolak.');
+        DB::transaction(function () use ($transfer, $validated) {
+            $lockedTransfer = PatientTransfer::whereKey($transfer->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedTransfer->status !== 'pending') {
+                throw new RuntimeException(
+                    'Permohonan mutasi sudah diproses sebelumnya.'
+                );
+            }
+
+            // Tolak mutasi dan simpan alasan.
+            $lockedTransfer->status = 'rejected';
+            $lockedTransfer->notes = $validated['rejection_reason'];
+            $lockedTransfer->save();
+
+            /*
+             * PENTING:
+             * Jangan mengubah admissions.current_room_id.
+             * Jangan mengubah admissions.status.
+             * Pasien tetap aktif di ruang asal.
+             */
+        });
+
+        return back()->with(
+            'success',
+            'Mutasi ditolak. Pasien tetap aktif di ruangan asal.'
+        );
     }
 }
-

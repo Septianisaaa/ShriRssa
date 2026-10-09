@@ -210,7 +210,7 @@
 
         <div class="auth-notice">
             <i class="fa-solid fa-circle-info" style="color: var(--success); margin-right: 0.25rem;"></i>
-            <strong>Catatan Akses:</strong> Akun Admin Ruangan didaftarkan langsung oleh <strong>Petugas SHRI (Superadmin)</strong>. Jika belum memiliki akun, silakan hubungi Tim Rekam Medis / Petugas SHRI.
+            <strong>Catatan Akses:</strong> Akun Admin Ruangan didaftarkan langsung oleh <strong>Petugas SHRI (Admin)</strong>. Jika belum memiliki akun, silakan hubungi Tim Rekam Medis / Petugas SHRI.
         </div>
 
         <div class="auth-footer">

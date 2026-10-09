@@ -250,7 +250,7 @@
                 </div>
             @endif
 
-            <!-- TAB 1: LOGIN PETUGAS SHRI (SUPERADMIN) -->
+            <!-- TAB 1: LOGIN PETUGAS SHRI (ADMIN) -->
             <div id="tab_shri_login" style="display: {{ $tab === 'shri_login' ? 'block' : 'none' }};">
                 <form action="{{ route('shri.login.post') }}" method="POST">
                     @csrf
@@ -288,7 +288,7 @@
                     </button>
                 </form>
 
-            <!-- TAB 3: REGISTRASI PETUGAS SHRI (SUPERADMIN) -->
+            <!-- TAB 3: REGISTRASI PETUGAS SHRI (ADMIN) -->
             <div id="tab_shri_register" style="display: {{ $tab === 'shri_register' ? 'block' : 'none' }};">
                 <form action="{{ route('shri.register.post') }}" method="POST">
                     @csrf

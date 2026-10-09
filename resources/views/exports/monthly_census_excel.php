@@ -227,7 +227,7 @@
    <Row ss:Height="10"/>
    <!-- Row 9: Banner Info -->
    <Row ss:Height="24">
-    <Cell ss:MergeAcross="18" ss:StyleID="sBannerInfo"><Data ss:Type="String">RUANGAN: <?= strtoupper(htmlspecialchars($room->name)) ?> | KATEGORI: <?= strtoupper(htmlspecialchars($room->category)) ?> | KELAS: <?= strtoupper(htmlspecialchars($currLabel)) ?> | KAPASITAS TT: <?= htmlspecialchars($room->capacity) ?> Beds</Data></Cell>
+    <Cell ss:MergeAcross="18" ss:StyleID="sBannerInfo"><Data ss:Type="String">RUANGAN: <?= strtoupper(htmlspecialchars($room->name)) ?> | KATEGORI: <?= strtoupper(htmlspecialchars($room->installation)) ?> | KELAS: <?= strtoupper(htmlspecialchars($currLabel)) ?> | KAPASITAS TT: <?= htmlspecialchars($room->capacity) ?> Beds</Data></Cell>
    </Row>
    <!-- Row 10: Empty space -->
    <Row ss:Height="10"/>

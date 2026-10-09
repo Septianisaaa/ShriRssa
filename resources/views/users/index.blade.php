@@ -42,7 +42,7 @@
 
                             <option value="{{ $r->id }}"
                                 {{ old('room_id') == $r->id ? 'selected' : '' }}>
-                                {{ $roomName }} ({{ $r->category }})
+                                {{ $roomName }} ({{ $r->installation }})
                             </option>
                         @endforeach
 

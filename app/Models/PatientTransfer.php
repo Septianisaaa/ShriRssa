@@ -22,6 +22,11 @@ class PatientTransfer extends Model
         'accepted_at' => 'datetime',
     ];
 
+        public function installation(): BelongsTo
+    {
+        return $this->belongsTo(Installation::class, 'installation_id');
+    }
+    
     public function admission(): BelongsTo
     {
         return $this->belongsTo(Admission::class);

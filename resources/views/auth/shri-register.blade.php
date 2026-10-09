@@ -162,7 +162,7 @@
         <div class="auth-header">
             <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" class="auth-logo">
             <h1>Daftar Petugas SHRI Baru</h1>
-            <p>Registrasi Akun Superadmin Rekam Medis / SHRI</p>
+            <p>Registrasi Akun Admin Rekam Medis / SHRI</p>
         </div>
 
         @if($errors->any())

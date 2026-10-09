@@ -83,11 +83,11 @@ class SampleDataSeeder extends Seeder
         foreach ($rooms as $room) {
             // Variasikan kelas untuk ruangan ini agar setiap tab sheet kelas terisi data dummy
             $roomClasses = [$room->room_class];
-            if ($room->category === 'Grand Paviliun') {
+            if ($room->installation === 'Grand Paviliun') {
                 $roomClasses = ['VIP', 'VVIP', 'Kelas 1'];
-            } elseif (str_contains($room->category, 'IPJT')) {
+            } elseif (str_contains($room->installation, 'IPJT')) {
                 $roomClasses = ['VIP', 'Kelas 1', 'Kelas 2', 'Kelas 3'];
-            } elseif (str_contains($room->category, 'IPIT')) {
+            } elseif (str_contains($room->installation, 'IPIT')) {
                 $roomClasses = ['Kelas 1', 'Kelas 2', 'Kelas 3'];
             } else {
                 $roomClasses = array_unique([$room->room_class, 'Kelas 1', 'Kelas 2', 'Kelas 3', 'VIP']);

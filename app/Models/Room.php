@@ -10,12 +10,17 @@ class Room extends Model
     protected $fillable = [
         'name',
         'code',
-        'category',
+        'installation',
         'room_class',
         'capacity',
         'is_active',
     ];
 
+         protected $casts = [
+        'capacity' => 'integer',
+        'is_active' => 'boolean',
+    ];
+    
     public function admissions(): HasMany
     {
         return $this->hasMany(Admission::class, 'current_room_id');

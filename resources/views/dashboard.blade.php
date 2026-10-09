@@ -466,7 +466,7 @@
                                 <strong>{{ $room->name }}</strong>
                             </td>
                             <td style="color: #64748b; font-weight: 500;">
-                                {{ $room->category }}
+                                {{ $room->installation }}
                             </td>
                             <td>
                                 <span style="font-weight: 500; color: #334155;">{{ $room->room_class }}</span>

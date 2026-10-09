@@ -505,12 +505,30 @@
             </li>
 
             @if($isSuper)
+            {{-- Kelola Ruangan --}}
+            <li class="nav-item {{ request()->routeIs('shri.room_management.*') ? 'active' : '' }}">
+                <a href="{{ route('shri.room_management.index') }}" title="Kelola Ruangan">
+                    <i class="fa-solid fa-hospital"></i>
+                    <span class="nav-text">Kelola Ruangan</span>
+                </a>
+            </li>
+
+            {{-- Kelola Akun --}}
             <li class="nav-item {{ request()->routeIs('*users.*') ? 'active' : '' }}">
                 <a href="{{ route('shri.users.index') }}" title="Kelola Akun">
                     <i class="fa-solid fa-users-gear"></i>
                     <span class="nav-text">Kelola Akun</span>
                 </a>
             </li>
+
+            {{-- Audit Trail --}}
+            <li class="nav-item {{ request()->routeIs('shri.audit_trail.*') ? 'active' : '' }}">
+                <a href="{{ route('shri.audit_trail.index') }}" title="Audit Trail">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span class="nav-text">Audit Trail</span>
+                </a>
+            </li>
+
             @endif
 
             <li class="nav-item {{ request()->routeIs('*profile.*') ? 'active' : '' }}">

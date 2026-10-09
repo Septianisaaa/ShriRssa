@@ -18,7 +18,7 @@
                     <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-dark);">{{ $user->name }}</h4>
                     <div style="margin-top: 0.25rem;">
                         @if($user->isSuperAdmin())
-                            <span class="badge badge-info">Petugas SHRI (Superadmin)</span>
+                            <span class="badge badge-info">Petugas SHRI (Admin)</span>
                         @else
                             <span class="badge badge-success">Admin {{ $user->room ? $user->room->name : 'Ruangan' }}</span>
                         @endif

@@ -148,7 +148,7 @@
         <div class="portal-options">
             <a href="{{ route('shri.login') }}" class="portal-btn" style="border-left: 4px solid var(--primary);">
                 <div class="portal-btn-content">
-                    <div class="portal-btn-title">Login Petugas SHRI (Superadmin)</div>
+                    <div class="portal-btn-title">Login Petugas SHRI (Admin)</div>
                     <div class="portal-btn-desc">Akses penuh pengelolaan sensus, mutasi, & pendaftaran admin ruangan.</div>
                 </div>
                 <div class="portal-btn-arrow"><i class="fa-solid fa-arrow-right"></i></div>

@@ -25,12 +25,12 @@
                             @endphp
 
                             <option value="{{ $r->id }}" {{ $r->id == $room->id ? 'selected' : '' }}>
-                                {{ $roomName }} ({{ $r->category }})
+                                {{ $roomName }} ({{ $r->installation }})
                             </option>
                         @endforeach
                     </select>
                 @else
-                    <input type="text" class="form-control" value="{{ $room->name }} ({{ $room->category }})" readonly style="background: #f1f5f9; cursor: not-allowed;">
+                    <input type="text" class="form-control" value="{{ $room->name }} ({{ $room->installation }})" readonly style="background: #f1f5f9; cursor: not-allowed;">
                     <input type="hidden" name="room_id" value="{{ $room->id }}">
                 @endif
             </div>
@@ -134,7 +134,7 @@
 
                             @if($r->id != $room->id)
                                 <option value="{{ $r->id }}">
-                                    {{ $roomName }} ({{ $r->category }})
+                                    {{ $roomName }} ({{ $r->installation }})
                                 </option>
                             @endif
                         @endforeach
@@ -534,9 +534,12 @@
                         </td>
 
                         {{-- Tanggal MRS --}}
-                        <td>
-                            {{ $adm->admission_date?->format('d/m/Y H:i') }}
-                        </td>
+                            <td>
+                                {{ $adm->admission_date->format('d/m/Y H:i') }}
+                                @if($adm->admission_date->month != now()->month)
+                                    <span class="badge badge-warning" style="font-size: 0.65rem;">Lintas Bulan</span>
+                                @endif
+                            </td>
                         <td>
                             @if($adm->admission_type === 'transfer')
                                 <span class="badge badge-warning" style="font-size: 0.75rem;">
@@ -616,7 +619,27 @@
                                 @endswitch
 
                             @endif
+                {{-- ================================================= --}}
+                {{-- ODC: Lama dirawat maksimal 24 jam --}}
+                {{-- ================================================= --}}
 
+                @if(
+                    $adm->admission_date &&
+                    $adm->discharge_date &&
+                    $adm->admission_date->diffInMinutes($adm->discharge_date) <= 1440
+                )
+
+                    <span
+                        class="badge badge-success"
+                        style="
+                            margin-left: 0.35rem;
+                            font-size: 0.7rem;
+                        "
+                    >
+                        ODC
+                    </span>
+
+                @endif
                         </td>
 
                         {{-- Lama Dirawat --}}
@@ -695,12 +718,12 @@
                         <select name="room_id" class="form-select" required>
                             @foreach($rooms as $r)
                                 <option value="{{ $r->id }}" {{ $r->id == $room->id ? 'selected' : '' }}>
-                                    {{ $r->name }} ({{ $r->category }})
+                                    {{ $r->name }} ({{ $r->installation }})
                                 </option>
                             @endforeach
                         </select>
                     @else
-                        <input type="text" class="form-control" value="{{ $room->name }} ({{ $room->category }})" readonly style="background: #f1f5f9; cursor: not-allowed;">
+                        <input type="text" class="form-control" value="{{ $room->name }} ({{ $room->installation }})" readonly style="background: #f1f5f9; cursor: not-allowed;">
                         <input type="hidden" name="room_id" value="{{ $room->id }}">
                     @endif
                 </div>
