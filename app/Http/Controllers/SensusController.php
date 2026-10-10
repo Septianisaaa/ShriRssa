@@ -464,10 +464,11 @@ class SensusController extends Controller
         $indicators = \App\Services\CensusCalculatorService::calculateIndicators($room, $year, $month);
 
         // 4. Read Logo RSSA as Base64 for Excel Header
-        $logoPath = public_path('logo-rssa.jpg');
+        $logoPath = file_exists(public_path('logo-rssa.png')) ? public_path('logo-rssa.png') : public_path('logo-rssa.jpg');
         $logoBase64 = '';
         if (file_exists($logoPath)) {
-            $logoBase64 = 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath));
+            $mime = str_ends_with($logoPath, '.png') ? 'image/png' : 'image/jpeg';
+            $logoBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($logoPath));
         }
 
         // 5. Kelompokkan Data Berdasarkan Kelas Perawatan untuk Multi-Sheet Export

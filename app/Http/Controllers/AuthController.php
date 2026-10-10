@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\AuditTrail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -70,6 +71,9 @@ class AuthController extends Controller
                     ->withErrors(['login' => 'Akun ini adalah Admin Ruangan. Silakan gunakan Halaman Login Admin Ruangan.']);
             }
 
+            // Catat log audit trail login berhasil
+            AuditTrail::record('login', 'Autentikasi', "Login berhasil sebagai Petugas SHRI (Admin)", $user, null, null, $request);
+
             $request->session()->regenerate();
             return redirect()->intended(route('shri.dashboard'))->with('success', "Selamat datang kembali, {$user->name}!");
         }
@@ -106,7 +110,10 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('shri.dashboard')->with('success', 'Registrasi Petugas SHRI berhasil! Anda telah masuk sebagai Superadmin.');
+        // Catat log audit trail registrasi akun baru
+        AuditTrail::record('create', 'Autentikasi', "Registrasi akun Petugas SHRI baru: {$user->name} (@{$user->username})", $user, ['name' => $user->name, 'username' => $user->username, 'email' => $user->email], null, $request);
+
+        return redirect()->route('shri.dashboard')->with('success', 'Registrasi Petugas SHRI berhasil! Anda telah masuk sebagai Admin.');
     }
 
     // Process Login Admin Ruangan
@@ -125,8 +132,12 @@ class AuthController extends Controller
             if (!$user->isAdminRuang()) {
                 Auth::logout();
                 return redirect()->route('admin_ruang.login')
-                    ->withErrors(['login' => 'Akun ini adalah Petugas SHRI (Superadmin). Silakan gunakan Halaman Login Petugas SHRI.']);
+                    ->withErrors(['login' => 'Akun ini adalah Petugas SHRI (Admin). Silakan gunakan Halaman Login Petugas SHRI.']);
             }
+
+            // Catat log audit trail login berhasil
+            $roomName = $user->room ? $user->room->name : 'Ruangan';
+            AuditTrail::record('login', 'Autentikasi', "Login berhasil sebagai Admin Ruangan ({$roomName})", $user, null, null, $request);
 
             $request->session()->regenerate();
             return redirect()->intended(route('admin_ruang.dashboard'))->with('success', "Selamat datang, {$user->name}!");
@@ -139,6 +150,11 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        if (Auth::check()) {
+            $user = Auth::user();
+            AuditTrail::record('logout', 'Autentikasi', "Pengguna keluar (logout) dari sistem", $user, null, null, $request);
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();

@@ -11,6 +11,7 @@ use App\Models\DailyCensus;
 use Carbon\Carbon;
 
 use App\Models\User;
+use App\Models\AuditTrail;
 use Illuminate\Support\Facades\Hash;
 
 class SampleDataSeeder extends Seeder
@@ -20,11 +21,11 @@ class SampleDataSeeder extends Seeder
         $rooms = Room::all();
         $firstRoom = $rooms->first();
 
-        // 1. Seed Petugas SHRI (Superadmin)
+        // 1. Seed Petugas SHRI (Admin)
         User::updateOrCreate(
             ['email' => 'shri@rssa.go.id'],
             [
-                'name' => 'Petugas SHRI (Superadmin)',
+                'name' => 'Petugas SHRI (Admin)',
                 'username' => 'shri',
                 'password' => Hash::make('password'),
                 'role' => 'superadmin',
@@ -78,6 +79,7 @@ class SampleDataSeeder extends Seeder
         DailyCensus::truncate();
         Admission::truncate();
         Patient::truncate();
+        AuditTrail::truncate();
         \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
 
         foreach ($rooms as $room) {
@@ -258,6 +260,132 @@ class SampleDataSeeder extends Seeder
                     $index++;
                 }
             }
+        }
+
+        // Seed Catatan Aktivitas Awal (Audit Trail)
+        $superadmin = User::where('role', 'superadmin')->first();
+        $adminRuang = User::where('role', 'admin')->first();
+
+        $sampleLogs = [
+            [
+                'user' => $superadmin,
+                'action' => 'login',
+                'module' => 'Autentikasi',
+                'desc' => 'Login berhasil sebagai Petugas SHRI (Admin)',
+                'method' => 'POST',
+                'url' => '/shri/login',
+                'values' => ['login' => 'shri@rssa.go.id'],
+                'time' => Carbon::now()->subMinutes(120),
+            ],
+            [
+                'user' => $superadmin,
+                'action' => 'create',
+                'module' => 'Kelola Ruangan',
+                'desc' => 'Menambahkan instalasi baru: IPIT (Infeksi Terpadu)',
+                'method' => 'POST',
+                'url' => '/shri/kelola-ruangan/instalasi',
+                'values' => ['name' => 'IPIT (Infeksi Terpadu)'],
+                'time' => Carbon::now()->subMinutes(115),
+            ],
+            [
+                'user' => $superadmin,
+                'action' => 'create',
+                'module' => 'Kelola Ruangan',
+                'desc' => 'Menambahkan ruangan rawat inap: ICU Infeksi Melati (IPIT-MEL-K1)',
+                'method' => 'POST',
+                'url' => '/shri/kelola-ruangan/ruangan',
+                'values' => ['name' => 'ICU Infeksi Melati', 'code' => 'IPIT-MEL-K1', 'capacity' => 6],
+                'time' => Carbon::now()->subMinutes(110),
+            ],
+            [
+                'user' => $superadmin,
+                'action' => 'create',
+                'module' => 'Kelola Akun',
+                'desc' => 'Mendaftarkan akun Admin Ruangan baru: Admin ICU Infeksi Melati (@adminruang)',
+                'method' => 'POST',
+                'url' => '/shri/users/admin-ruang',
+                'values' => ['name' => 'Admin ICU Infeksi Melati', 'username' => 'adminruang', 'email' => 'admin.ruang@rssa.go.id'],
+                'time' => Carbon::now()->subMinutes(105),
+            ],
+            [
+                'user' => $adminRuang ?? $superadmin,
+                'action' => 'login',
+                'module' => 'Autentikasi',
+                'desc' => 'Login berhasil sebagai Admin Ruangan (ICU Infeksi Melati)',
+                'method' => 'POST',
+                'url' => '/admin-ruang/login',
+                'values' => ['login' => 'adminruang'],
+                'time' => Carbon::now()->subMinutes(90),
+            ],
+            [
+                'user' => $adminRuang ?? $superadmin,
+                'action' => 'create',
+                'module' => 'Sensus Harian',
+                'desc' => 'Pendaftaran pasien rawat inap baru: Budi Santoso (No. RM: 12001001)',
+                'method' => 'POST',
+                'url' => '/admin-ruang/sensus/patient',
+                'values' => ['name' => 'Budi Santoso', 'rm_number' => '12001001', 'room_class' => 'Kelas 1', 'diagnosis' => 'DHF (Demam Berdarah Dengue)'],
+                'time' => Carbon::now()->subMinutes(75),
+            ],
+            [
+                'user' => $adminRuang ?? $superadmin,
+                'action' => 'create',
+                'module' => 'Mutasi Pasien',
+                'desc' => 'Pengajuan mutasi / pindah ruangan pasien antar bangsal',
+                'method' => 'POST',
+                'url' => '/admin-ruang/transfers',
+                'values' => ['patient_name' => 'Budi Santoso', 'target_room' => 'Wijaya Kusuma'],
+                'time' => Carbon::now()->subMinutes(50),
+            ],
+            [
+                'user' => $superadmin,
+                'action' => 'update',
+                'module' => 'Mutasi Pasien',
+                'desc' => 'Konfirmasi penerimaan (terima) mutasi pasien ke ruangan',
+                'method' => 'POST',
+                'url' => '/shri/transfers/1/accept',
+                'values' => ['status' => 'accepted'],
+                'time' => Carbon::now()->subMinutes(35),
+            ],
+            [
+                'user' => $adminRuang ?? $superadmin,
+                'action' => 'update',
+                'module' => 'Sensus Harian',
+                'desc' => 'Pemulangan pasien (KRS) dengan kondisi: Sembuh / Membaik',
+                'method' => 'POST',
+                'url' => '/admin-ruang/sensus/discharge/1',
+                'values' => ['discharge_condition' => 'cured', 'status' => 'discharged'],
+                'time' => Carbon::now()->subMinutes(20),
+            ],
+            [
+                'user' => $superadmin,
+                'action' => 'update',
+                'module' => 'Profil Pengguna',
+                'desc' => 'Pembaruan profil pengguna',
+                'method' => 'POST',
+                'url' => '/shri/profile',
+                'values' => ['name' => 'Petugas SHRI (Admin)', 'phone' => '081234567890'],
+                'time' => Carbon::now()->subMinutes(5),
+            ],
+        ];
+
+        foreach ($sampleLogs as $log) {
+            AuditTrail::create([
+                'user_id' => $log['user']?->id,
+                'username' => $log['user']?->username ?? $log['user']?->email,
+                'user_name' => $log['user']?->name,
+                'action' => $log['action'],
+                'module' => $log['module'],
+                'description' => $log['desc'],
+                'old_values' => null,
+                'new_values' => $log['values'],
+                'method' => $log['method'],
+                'url' => $log['url'],
+                'ip_address' => '127.0.0.1',
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+                'created_at' => $log['time'],
+                'updated_at' => $log['time'],
+            ]);
         }
     }
 }

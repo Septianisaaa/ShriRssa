@@ -13,7 +13,7 @@
             <h3 class="section-title">Informasi Akun</h3>
 
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-light);">
-                <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" style="width: 54px; height: 54px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-light);">
+                <img src="{{ asset('logo-rssa.png') }}" alt="Logo RSSA" style="width: 54px; height: 54px; object-fit: contain;">
                 <div>
                     <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--text-dark);">{{ $user->name }}</h4>
                     <div style="margin-top: 0.25rem;">

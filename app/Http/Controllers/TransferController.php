@@ -51,7 +51,7 @@ class TransferController extends Controller
             ->limit(20)
             ->get();
 
-        $rooms = Room::where('is_active', true)->get();
+        $rooms = Room::where('is_active', true)->orderBy('name')->get();
 
         return view('transfers.index', compact(
             'pendingTransfers',

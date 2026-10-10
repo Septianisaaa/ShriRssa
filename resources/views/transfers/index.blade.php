@@ -123,6 +123,11 @@
                             </td>
                         </tr>
                     @endforelse
+                    <tr class="baris-kosong-filter" style="display: none;">
+                        <td colspan="7" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
+                            Tidak ada permohonan mutasi yang sesuai dengan filter.
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -150,11 +155,20 @@
                 </select>
             </div>
             <div>
-                <label for="filterRuangan">Ruangan asal/tujuan</label>
-                <select id="filterRuangan">
-                    <option value="">Semua ruangan</option>
+                <label for="filterRuangAsal">Ruang Asal</label>
+                <select id="filterRuangAsal">
+                    <option value="">Semua ruang asal</option>
                     @foreach ($rooms as $room)
-                        <option value="{{ $room->id }}">{{ $room->name }}</option>
+                        <option value="{{ $room->id }}">{{ $room->name }} ({{ $room->installation }})</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="filterRuangTujuan">Ruang Tujuan</label>
+                <select id="filterRuangTujuan">
+                    <option value="">Semua ruang tujuan</option>
+                    @foreach ($rooms as $room)
+                        <option value="{{ $room->id }}">{{ $room->name }} ({{ $room->installation }})</option>
                     @endforeach
                 </select>
             </div>
@@ -243,6 +257,11 @@
                             </td>
                         </tr>
                     @endforelse
+                    <tr class="baris-kosong-filter" style="display: none;">
+                        <td colspan="9" style="text-align: center; padding: 1.5rem; color: var(--text-muted);">
+                            Tidak ada riwayat mutasi yang sesuai dengan filter.
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -286,7 +305,7 @@
 <style>
     .filter-mutasi-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(150px, 1fr));
+        grid-template-columns: 1.5fr 1fr 1fr 1.3fr 1.3fr auto;
         gap: 0.85rem;
         align-items: end;
     }
@@ -309,7 +328,10 @@
         font: inherit;
     }
     .filter-mutasi-actions { display: flex; align-items: end; }
-    @media (max-width: 900px) {
+    @media (max-width: 1200px) {
+        .filter-mutasi-grid { grid-template-columns: repeat(3, minmax(140px, 1fr)); }
+    }
+    @media (max-width: 768px) {
         .filter-mutasi-grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
     }
     @media (max-width: 520px) {
@@ -403,7 +425,8 @@
         const pencarian = document.getElementById('filterPencarian');
         const tanggal = document.getElementById('filterTanggal');
         const status = document.getElementById('filterStatus');
-        const ruangan = document.getElementById('filterRuangan');
+        const ruangAsal = document.getElementById('filterRuangAsal');
+        const ruangTujuan = document.getElementById('filterRuangTujuan');
         const reset = document.getElementById('resetFilterMutasi');
         const hasil = document.getElementById('hasilFilterMutasi');
 
@@ -411,7 +434,8 @@
             const kata = (pencarian.value || '').trim().toLocaleLowerCase();
             const tanggalDipilih = tanggal.value;
             const statusDipilih = status.value;
-            const ruanganDipilih = ruangan.value;
+            const asalDipilih = ruangAsal.value;
+            const tujuanDipilih = ruangTujuan.value;
             let terlihat = 0;
             let total = 0;
 
@@ -422,22 +446,29 @@
                     (baris.dataset.rm || '').toLocaleLowerCase().includes(kata);
                 const cocokTanggal = !tanggalDipilih || baris.dataset.tanggal === tanggalDipilih;
                 const cocokStatus = !statusDipilih || baris.dataset.status === statusDipilih;
-                const cocokRuangan = !ruanganDipilih ||
-                    baris.dataset.asal === ruanganDipilih ||
-                    baris.dataset.tujuan === ruanganDipilih;
-                const cocok = cocokCari && cocokTanggal && cocokStatus && cocokRuangan;
+                const cocokAsal = !asalDipilih || baris.dataset.asal === asalDipilih;
+                const cocokTujuan = !tujuanDipilih || baris.dataset.tujuan === tujuanDipilih;
+                const cocok = cocokCari && cocokTanggal && cocokStatus && cocokAsal && cocokTujuan;
                 baris.hidden = !cocok;
+                baris.style.display = cocok ? '' : 'none';
                 if (cocok) terlihat++;
             });
 
             document.querySelectorAll('.tabel-mutasi-filter').forEach(function (tabel) {
-                const kosong = tabel.querySelector('.baris-kosong-filter');
-                if (kosong) kosong.hidden = true;
+                const barisDiTabel = tabel.querySelectorAll('.baris-mutasi');
+                if (barisDiTabel.length > 0) {
+                    const adaVisible = Array.from(barisDiTabel).some(b => !b.hidden && b.style.display !== 'none');
+                    const barisKosong = tabel.querySelector('.baris-kosong-filter');
+                    if (barisKosong) {
+                        barisKosong.style.display = adaVisible ? 'none' : '';
+                        barisKosong.hidden = adaVisible;
+                    }
+                }
             });
             hasil.textContent = 'Menampilkan ' + terlihat + ' dari ' + total + ' baris mutasi pada kedua tabel.';
         }
 
-        [pencarian, tanggal, status, ruangan].forEach(function (elemen) {
+        [pencarian, tanggal, status, ruangAsal, ruangTujuan].forEach(function (elemen) {
             elemen.addEventListener('input', terapkanFilterMutasi);
             elemen.addEventListener('change', terapkanFilterMutasi);
         });
@@ -445,7 +476,8 @@
             pencarian.value = '';
             tanggal.value = '';
             status.value = '';
-            ruangan.value = '';
+            ruangAsal.value = '';
+            ruangTujuan.value = '';
             terapkanFilterMutasi();
         });
         terapkanFilterMutasi();

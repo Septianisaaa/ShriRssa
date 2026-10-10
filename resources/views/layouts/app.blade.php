@@ -6,7 +6,7 @@
     <title>@yield('title', 'SHRI RSUD Dr. Saiful Anwar Malang')</title>
     
     <!-- Favicon -->
-    <link rel="icon" href="{{ asset('logo-rssa.jpg') }}" type="image/jpeg">
+    <link rel="icon" href="{{ asset('logo-rssa.png') }}" type="image/png">
 
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -467,7 +467,7 @@
     <aside>
         <div class="brand">
             <div class="brand-content">
-                <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" class="brand-logo-img">
+                <img src="{{ asset('logo-rssa.png') }}" alt="Logo RSSA" class="brand-logo-img">
                 <div class="brand-text">
                     <h1>SHRI RSSA</h1>
                     <p>RSUD Dr. Saiful Anwar</p>
