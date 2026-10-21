@@ -45,6 +45,11 @@ class User extends Authenticatable
         return $this->role === 'superadmin';
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->isSuperAdmin();
+    }
+
     public function isAdminRuang(): bool
     {
         return $this->role === 'admin';

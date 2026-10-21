@@ -21,7 +21,7 @@ class DashboardController extends Controller
         }
 
         // 2. Fetch distinct options for filters
-        $allInstalasi = Room::where('is_active', true)->select('category')->distinct()->pluck('category')->filter()->values();
+        $allInstalasi = Room::where('is_active', true)->select('installation')->distinct()->pluck('installation')->filter()->values();
         $allClasses = Room::where('is_active', true)->select('room_class')->distinct()->pluck('room_class')->filter()->values();
 
         // 3. Apply Filters
@@ -31,7 +31,7 @@ class DashboardController extends Controller
         $filterSearch = $request->get('search');
 
         if ($filterInstalasi) {
-            $query->where('category', $filterInstalasi);
+            $query->where('installation', $filterInstalasi);
         }
 
         if ($filterKelas) {

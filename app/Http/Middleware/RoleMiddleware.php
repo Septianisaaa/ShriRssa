@@ -9,24 +9,30 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
-    public function handle(Request $request, Closure $next, string ...$roles): Response
+    public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check()) {
+        $user = Auth::user();
+
+        if (!$user) {
             if ($request->is('admin-ruang*')) {
-                return redirect()->route('admin_ruang.login')->with('info', 'Silakan login terlebih dahulu sebagai Admin Ruangan.');
+                return redirect()->route('admin_ruang.login');
             }
-            return redirect()->route('shri.login')->with('info', 'Silakan login terlebih dahulu sebagai Petugas SHRI.');
+
+            return redirect()->route('shri.login');
         }
 
-        $user = Auth::user();
-        if (!in_array($user->role, $roles)) {
-            $redirectRoute = $user->isSuperAdmin() ? 'shri.dashboard' : 'admin_ruang.dashboard';
-            return redirect()->route($redirectRoute)->with('info', 'Anda tidak memiliki hak akses untuk halaman tersebut.');
+        if (
+            $request->is('shri*') &&
+            !$user->isSuperAdmin()
+        ) {
+            abort(403, 'Anda tidak memiliki akses ke halaman ini.');
+        }
+
+        if (
+            $request->is('admin-ruang*') &&
+            ($user->isSuperAdmin() || !$user->room_id)
+        ) {
+            abort(403, 'Anda tidak memiliki akses ke halaman ini.');
         }
 
         return $next($request);

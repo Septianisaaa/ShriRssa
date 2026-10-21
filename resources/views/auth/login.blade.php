@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login & Registrasi - SHRI RSUD Dr. Saiful Anwar Malang</title>
-    <link rel="icon" href="{{ asset('logo-rssa.jpg') }}" type="image/jpeg">
+    <link rel="icon" href="{{ asset('logo-rssa.png') }}" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -213,7 +213,7 @@
     <div class="auth-card">
         <!-- Auth Header with RSSA Logo -->
         <div class="auth-header">
-            <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" class="auth-logo">
+            <img src="{{ asset('logo-rssa.png') }}" alt="Logo RSSA" class="auth-logo">
             <h1>Sensus Harian Rawat Inap (SHRI)</h1>
             <p>RSUD Dr. Saiful Anwar Malang</p>
         </div>
@@ -250,7 +250,7 @@
                 </div>
             @endif
 
-            <!-- TAB 1: LOGIN PETUGAS SHRI (SUPERADMIN) -->
+            <!-- TAB 1: LOGIN PETUGAS SHRI (ADMIN) -->
             <div id="tab_shri_login" style="display: {{ $tab === 'shri_login' ? 'block' : 'none' }};">
                 <form action="{{ route('shri.login.post') }}" method="POST">
                     @csrf
@@ -265,16 +265,9 @@
                     </div>
 
                     <button type="submit" class="btn btn-primary">
-                        Masuk Petugas SHRI (Superadmin)
+                        Masuk Petugas SHRI (Admin)
                     </button>
                 </form>
-
-                <div class="credential-box">
-                    <strong>Demo Credential (Petugas SHRI):</strong><br>
-                    Username / Email: <code>shri</code> / <code>shri@rssa.go.id</code><br>
-                    Password: <code>password</code>
-                </div>
-            </div>
 
             <!-- TAB 2: LOGIN ADMIN RUANGAN (ADMIN) -->
             <div id="tab_admin_login" style="display: {{ $tab === 'admin_login' ? 'block' : 'none' }};">
@@ -295,14 +288,7 @@
                     </button>
                 </form>
 
-                <div class="credential-box">
-                    <strong>Demo Credential (Admin Ruang):</strong><br>
-                    Username / Email: <code>adminruang</code> / <code>admin.ruang@rssa.go.id</code><br>
-                    Password: <code>password</code>
-                </div>
-            </div>
-
-            <!-- TAB 3: REGISTRASI PETUGAS SHRI (SUPERADMIN) -->
+            <!-- TAB 3: REGISTRASI PETUGAS SHRI (ADMIN) -->
             <div id="tab_shri_register" style="display: {{ $tab === 'shri_register' ? 'block' : 'none' }};">
                 <form action="{{ route('shri.register.post') }}" method="POST">
                     @csrf

@@ -129,7 +129,7 @@
         <ul class="rule-list">
             <li class="rule-item">
                 <div class="bullet-dot"></div>
-                <div>Akun Admin Ruangan didaftarkan langsung oleh <strong>Petugas SHRI (Superadmin)</strong>. <strong>Jika belum memiliki akun</strong>, silakan hubungi Tim Rekam Medis / Petugas SHRI</div>
+                <div>Akun Admin Ruangan didaftarkan langsung oleh <strong>Petugas SHRI (Admin)</strong>. <strong>Jika belum memiliki akun</strong>, silakan hubungi Tim Rekam Medis / Petugas SHRI</div>
             </li>    
             <li class="rule-item">
                 <div class="bullet-dot"></div>

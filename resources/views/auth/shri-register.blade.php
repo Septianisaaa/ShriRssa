@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar Petugas SHRI Baru - RSUD Dr. Saiful Anwar Malang</title>
-    <link rel="icon" href="{{ asset('logo-rssa.jpg') }}" type="image/jpeg">
+    <link rel="icon" href="{{ asset('logo-rssa.png') }}" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -160,9 +160,9 @@
 
     <div class="auth-card">
         <div class="auth-header">
-            <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" class="auth-logo">
+            <img src="{{ asset('logo-rssa.png') }}" alt="Logo RSSA" class="auth-logo">
             <h1>Daftar Petugas SHRI Baru</h1>
-            <p>Registrasi Akun Superadmin Rekam Medis / SHRI</p>
+            <p>Registrasi Akun Admin Rekam Medis / SHRI</p>
         </div>
 
         @if($errors->any())

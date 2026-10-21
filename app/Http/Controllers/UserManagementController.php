@@ -51,7 +51,7 @@ class UserManagementController extends Controller
     public function destroy(User $user)
     {
         if ($user->isSuperAdmin() && User::where('role', 'superadmin')->count() <= 1) {
-            return redirect()->back()->with('info', 'Tidak dapat menghapus satu-satunya akun Petugas SHRI (Superadmin).');
+            return redirect()->back()->with('info', 'Tidak dapat menghapus satu-satunya akun Petugas SHRI (Admin).');
         }
 
         $userName = $user->name;

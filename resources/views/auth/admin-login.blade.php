@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Admin Ruangan - RSUD Dr. Saiful Anwar Malang</title>
-    <link rel="icon" href="{{ asset('logo-rssa.jpg') }}" type="image/jpeg">
+    <link rel="icon" href="{{ asset('logo-rssa.png') }}" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -167,7 +167,7 @@
 
     <div class="auth-card">
         <div class="auth-header">
-            <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" class="auth-logo">
+            <img src="{{ asset('logo-rssa.png') }}" alt="Logo RSSA" class="auth-logo">
             <h1>Login Admin Ruangan</h1>
             <p>Portal Perawat & Petugas Ruangan Perawatan</p>
         </div>
@@ -210,7 +210,7 @@
 
         <div class="auth-notice">
             <i class="fa-solid fa-circle-info" style="color: var(--success); margin-right: 0.25rem;"></i>
-            <strong>Catatan Akses:</strong> Akun Admin Ruangan didaftarkan langsung oleh <strong>Petugas SHRI (Superadmin)</strong>. Jika belum memiliki akun, silakan hubungi Tim Rekam Medis / Petugas SHRI.
+            <strong>Catatan Akses:</strong> Akun Admin Ruangan didaftarkan langsung oleh <strong>Petugas SHRI (Admin)</strong>. Jika belum memiliki akun, silakan hubungi Tim Rekam Medis / Petugas SHRI.
         </div>
 
         <div class="auth-footer">

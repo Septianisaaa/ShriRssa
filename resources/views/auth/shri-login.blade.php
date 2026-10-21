@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Petugas SHRI - RSUD Dr. Saiful Anwar Malang</title>
-    <link rel="icon" href="{{ asset('logo-rssa.jpg') }}" type="image/jpeg">
+    <link rel="icon" href="{{ asset('logo-rssa.png') }}" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -174,9 +174,9 @@
 
     <div class="auth-card">
         <div class="auth-header">
-            <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" class="auth-logo">
+            <img src="{{ asset('logo-rssa.png') }}" alt="Logo RSSA" class="auth-logo">
             <h1>Login Petugas SHRI</h1>
-            <p>Portal Superadmin Sensus Harian Rawat Inap</p>
+            <p>Portal Admin Sensus Harian Rawat Inap</p>
         </div>
 
         @if(session('info'))
@@ -215,15 +215,9 @@
             </div>
 
             <button type="submit" class="btn btn-primary">
-                Masuk Petugas SHRI (Superadmin)
+                Masuk Petugas SHRI (Admin)
             </button>
         </form>
-
-        <div class="credential-box">
-            <strong>Demo Credential Petugas SHRI:</strong><br>
-            Username / Email: <code>shri</code> / <code>shri@rssa.go.id</code><br>
-            Password: <code>password</code>
-        </div>
 
         <div class="auth-footer">
             Belum memiliki akun Petugas SHRI? <a href="{{ route('shri.register') }}">Daftar Baru</a><br>

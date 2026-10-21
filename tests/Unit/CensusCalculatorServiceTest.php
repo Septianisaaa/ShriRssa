@@ -18,7 +18,7 @@ class CensusCalculatorServiceTest extends TestCase
         $room = Room::create([
             'name' => 'Ruang Barito',
             'code' => 'R-BRT',
-            'category' => 'Perawatan Umum',
+            'installation' => 'Perawatan Umum',
             'room_class' => 'Kelas 1',
             'capacity' => 10,
         ]);
@@ -46,7 +46,7 @@ class CensusCalculatorServiceTest extends TestCase
         $room = Room::create([
             'name' => 'Ruang Barito',
             'code' => 'R-BRT',
-            'category' => 'Perawatan Umum',
+            'installation' => 'Perawatan Umum',
             'room_class' => 'Kelas 1',
             'capacity' => 10,
         ]);
@@ -69,12 +69,12 @@ class CensusCalculatorServiceTest extends TestCase
         $this->assertEquals(8, $admission->calculateLengthOfStay());
     }
 
-    public function test_automatic_deceased_category_under_and_over_48h(): void
+    public function test_automatic_deceased_installation_under_and_over_48h(): void
     {
         $room = Room::create([
             'name' => 'Ruang Barito',
             'code' => 'R-BRT',
-            'category' => 'Perawatan Umum',
+            'installation' => 'Perawatan Umum',
             'room_class' => 'Kelas 1',
             'capacity' => 10,
         ]);

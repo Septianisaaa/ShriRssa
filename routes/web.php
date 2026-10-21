@@ -8,7 +8,9 @@ use App\Http\Controllers\CensusController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RoomManagementController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\AuditTrailController;
 use Illuminate\Support\Facades\Auth;
 
 // Root Route: Auto Redirect Based on Auth Status & Role
@@ -16,7 +18,7 @@ Route::get('/', function () {
     if (!Auth::check()) {
         return redirect()->route('login');
     }
-    return Auth::user()->isSuperAdmin()
+    return Auth::user()->isAdmin()
         ? redirect()->route('shri.dashboard')
         : redirect()->route('admin_ruang.dashboard');
 });
@@ -42,7 +44,7 @@ Route::post('/admin-ruang/login', [AuthController::class, 'loginAdminRuang'])->n
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // ==========================================
-// 1. PETUGAS SHRI (SUPERADMIN) PROTECTED ROUTES
+// 1. PETUGAS SHRI (ADMIN) PROTECTED ROUTES
 // ==========================================
 Route::middleware(['auth', 'role:superadmin'])->prefix('shri')->name('shri.')->group(function () {
     // Dashboard (Full View & Edit)
@@ -78,10 +80,30 @@ Route::middleware(['auth', 'role:superadmin'])->prefix('shri')->name('shri.')->g
     Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
     Route::post('/users/admin-ruang', [UserManagementController::class, 'storeAdminRuang'])->name('users.store_admin_ruang');
     Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
+
+    // Kelola Ruangan
+    Route::get('/kelola-ruangan', [RoomManagementController::class, 'index'])
+    ->name('room_management.index');
+    Route::post('/kelola-ruangan/instalasi', [RoomManagementController::class, 'storeInstallation'])
+    ->name('room_management.store_installation');
+    Route::post('/kelola-ruangan/kelasperawatan', [RoomManagementController::class, 'storeRoomClass'])
+    ->name('room_management.store_room_class');
+    Route::post('/kelola-ruangan/ruangan', [RoomManagementController::class, 'storeRoom'])
+    ->name('room_management.store');
+    Route::put('/kelola-ruangan/ruangan/{room}', [RoomManagementController::class, 'updateRoom'])
+    ->name('room_management.update');
+    Route::delete('/kelola-ruangan/{room}', [RoomManagementController::class, 'destroyRoom'])
+    ->name('room_management.destroy');
+
+    // Audit Trail
+    Route::get('/audit-trail', [AuditTrailController::class, 'index'])
+        ->name('audit_trail.index');
+
+
 });
 
 // ==========================================
-// 2. ADMIN RUANGAN (ADMIN) PROTECTED ROUTES
+// 2. ADMIN RUANGAN (USER) PROTECTED ROUTES
 // ==========================================
 Route::middleware(['auth', 'role:admin'])->prefix('admin-ruang')->name('admin_ruang.')->group(function () {
     // Dashboard (View Only)
@@ -105,7 +127,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin-ruang')->name('admin_ru
     Route::post('/transfers/{transfer}/accept', [TransferController::class, 'accept'])->name('transfers.accept');
     Route::post('/transfers/{transfer}/reject', [TransferController::class, 'reject'])->name('transfers.reject');
 
-    // Buku Panduan Pengguna (Bukpa - View Only)
+    // Buku Panduan Pengguna (Bukpan - View Only)
     Route::get('/guide', [GuideController::class, 'index'])->name('guide.index');
 
     // User Profile

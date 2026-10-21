@@ -6,7 +6,7 @@
     <title>@yield('title', 'SHRI RSUD Dr. Saiful Anwar Malang')</title>
     
     <!-- Favicon -->
-    <link rel="icon" href="{{ asset('logo-rssa.jpg') }}" type="image/jpeg">
+    <link rel="icon" href="{{ asset('logo-rssa.png') }}" type="image/png">
 
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -467,7 +467,7 @@
     <aside>
         <div class="brand">
             <div class="brand-content">
-                <img src="{{ asset('logo-rssa.jpg') }}" alt="Logo RSSA" class="brand-logo-img">
+                <img src="{{ asset('logo-rssa.png') }}" alt="Logo RSSA" class="brand-logo-img">
                 <div class="brand-text">
                     <h1>SHRI RSSA</h1>
                     <p>RSUD Dr. Saiful Anwar</p>
@@ -494,7 +494,7 @@
             <li class="nav-item {{ request()->routeIs('*transfers.*') ? 'active' : '' }}">
                 <a href="{{ route($rolePrefix . 'transfers.index') }}" title="Mutasi Pindahan">
                     <i class="fa-solid fa-right-left"></i>
-                    <span class="nav-text">Mutasi Pindahan</span>
+                    <span class="nav-text">Mutasi Pasien</span>
                 </a>
             </li>
             <li class="nav-item {{ request()->routeIs('*guide.*') ? 'active' : '' }}">
@@ -505,12 +505,30 @@
             </li>
 
             @if($isSuper)
+            {{-- Kelola Ruangan --}}
+            <li class="nav-item {{ request()->routeIs('shri.room_management.*') ? 'active' : '' }}">
+                <a href="{{ route('shri.room_management.index') }}" title="Kelola Ruangan">
+                    <i class="fa-solid fa-hospital"></i>
+                    <span class="nav-text">Kelola Ruangan</span>
+                </a>
+            </li>
+
+            {{-- Kelola Akun --}}
             <li class="nav-item {{ request()->routeIs('*users.*') ? 'active' : '' }}">
                 <a href="{{ route('shri.users.index') }}" title="Kelola Akun">
                     <i class="fa-solid fa-users-gear"></i>
                     <span class="nav-text">Kelola Akun</span>
                 </a>
             </li>
+
+            {{-- Audit Trail --}}
+            <li class="nav-item {{ request()->routeIs('shri.audit_trail.*') ? 'active' : '' }}">
+                <a href="{{ route('shri.audit_trail.index') }}" title="Audit Trail">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span class="nav-text">Audit Trail</span>
+                </a>
+            </li>
+
             @endif
 
             <li class="nav-item {{ request()->routeIs('*profile.*') ? 'active' : '' }}">
